@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+
+// Importamos el servicio
+import authService from '../services/authService';
+
+// 1 y 2. Importaciones de las imágenes requeridas
+import bgLogin from '../image/FondoLoginn.jpg';
+import logoEmpresa from '../image/LOGO2-02-325x217.png';
 
 const Login = () => {
   const [name_user, setNameUser] = useState('');
@@ -10,59 +16,101 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // La URL debe coincidir con tu server.js del backend 
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
-        name_user,
-        password
-      });
-
-      console.log("Respuesta del servidor:", response.data); // Para depuración
-
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        navigate('/dashboard');
-      }
+      // Llamamos a la lógica delegada en el servicio
+      await authService.login(name_user, password);
+      
+      // Si no hubo error, el token ya está guardado y podemos navegar
+      navigate('/dashboard'); 
     } catch (error) {
-      alert("Error en las credenciales. Revisa tu email o contraseña.", error);
+      // Manejamos el error que el servicio lanzó
+      const message = error.message || "Error en las credenciales. Revisa tu usuario o contraseña.";
+      alert(message);
     }
   };
-
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-100">
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
-        <h2 className="text-3xl font-extrabold text-center text-blue-800 mb-6">LEGALY</h2>
-        <p className="text-center text-gray-500 mb-8">Gestión de Expedientes Jurídicos</p>
+    // 1. Contenedor principal con la imagen de fondo
+    <div 
+      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${bgLogin})` }}
+    >
+      {/* Capa oscura superpuesta (overlay) para que el cuadro de login resalte mejor sobre el fondo */}
+      {/*<div className="absolute inset-0 bg-black bg-opacity-60"></div>*/}
+
+      {/* Contenedor del Cuadro de Login (Estilo Split-Screen) */}
+      <div className="relative z-10 flex w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden mx-4 h-[550px]">
         
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
-            <input
-              type="text"
-              value={name_user}
-              onChange={(e) => setNameUser(e.target.value)}
-              className="w-full px-4 py-2 mt-1 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="abogado"
-              required
-            />
+        {/* Mitad Izquierda: Branding y Logo (Se oculta en pantallas de celulares para ahorrar espacio) */}
+        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-[#080E21] p-12 text-center relative">
+          {/* 2. Logo de la empresa */}
+          <img 
+            src={logoEmpresa} 
+            alt="Logo Legaly" 
+            className="w-64 mb-8 object-contain drop-shadow-lg" 
+          />
+          
+          {/* 3. Mensaje de bienvenida en español */}
+          <h2 className="text-3xl font-bold text-white mb-4">¡Bienvenido de nuevo!</h2>
+          <div className="w-16 h-1 bg-blue-500 mb-6 rounded-full"></div>
+          <p className="text-gray-300 text-lg">
+            Inicia sesión para continuar gestionando tus expedientes y documentos jurídicos.
+          </p>
+        </div>
+
+        {/* Mitad Derecha: 4. Formulario de Autenticación */}
+        <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-white">
+          
+          <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center md:text-left">
+            Ingresa a tu cuenta
+          </h3>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre de Usuario</label>
+              <input
+                type="text"
+                value={name_user}
+                onChange={(e) => setNameUser(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#080E21] focus:border-transparent transition-all outline-none"
+                placeholder="Ej. abogado_socio"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#080E21] focus:border-transparent transition-all outline-none"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 px-4 mt-4 bg-[#0F172A] hover:bg-slate-700 text-white font-bold rounded-lg transition duration-300 shadow-md"
+            >
+              Iniciar Sesión
+            </button>
+          </form>
+
+          {/* 5. Leyenda para recuperar contraseña */}
+          <div className="mt-8 border-t border-gray-200 pt-6 text-center">
+            <p className="text-sm text-gray-600">
+              ¿Tienes problemas para acceder? <br />
+              <button 
+                type="button"
+                className="text-blue-600 hover:text-blue-800 font-semibold transition-colors mt-1"
+                onClick={() => alert("Función de recuperación en desarrollo")}
+              >
+                Recuperar contraseña
+              </button>
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 mt-1 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 px-4 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition duration-200"
-          >
-            Iniciar Sesión
-          </button>
-        </form>
+
+        </div>
       </div>
     </div>
   );
