@@ -14,8 +14,27 @@ const obtenerCasos = async () => {
   }     
 };
 
+const crearCaso = async (casoData) => {
+  try {
+    const response = await axios.post(`${API_URL}/`,{
+      area_legal_id: +casoData.areaLegal,
+      cliente_id: +casoData.cliente,
+      responsable_id: +casoData.responsable,
+      descripcion_corta: casoData.titulo,
+      descripcion_completa: casoData.descripcion,
+      contraparte: casoData.contraparte,
+      fecha_inicio: null
+    });
+    return response.data; // Aquí podrías devolver el nuevo caso creado o un mensaje de éxito
+  } catch (error) {
+    console.error("Error al obtener los casos:", error);
+    throw error;
+  }     
+};
+
 const casosService = {
-  obtenerCasos
+  obtenerCasos,
+  crearCaso
 };
 
 export default casosService;

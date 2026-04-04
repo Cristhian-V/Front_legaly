@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import userService from '../services/userService';
-import logoAyP from '../image/LogoAyP.png'; // Ajusta la ruta si es necesario
+import listadoService from '../services/listadosService'
+import logoAyP from '../image/LogoAyP.png'; 
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ const Layout = () => {
   const [datosUsuario, setDatosUsuario] = useState({
     rol: 'Cargando...', nombre_completo: 'Abogado', avatar_url: ''
   });
+  const [catalogos, setCatalogos] = useState();
+
   const [cargando, setCargando] = useState(true);
 
   // Cargamos el perfil UNA SOLA VEZ para toda la aplicación
@@ -21,6 +24,9 @@ const Layout = () => {
         if (respuestaPerfil && respuestaPerfil.dataUsuario) {
           setDatosUsuario(respuestaPerfil.dataUsuario);
         }
+
+        const respuestaCatalogos = await listadoService.traerListados();
+        setCatalogos(respuestaCatalogos);
       } catch  {
         handleLogout();
       } finally {
@@ -102,7 +108,7 @@ const Layout = () => {
 
         {/* AQUÍ SE INYECTA EL CONTENIDO DINÁMICO (Inicio o Expedientes) */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          <Outlet context={{ datosUsuario }} /> 
+          <Outlet context={{ datosUsuario, catalogos }} />
         </div>
       </div>
     </div>
