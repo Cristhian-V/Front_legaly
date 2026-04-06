@@ -42,10 +42,21 @@ const obtenerDetalleCaso = async (expediente_id) => {
   }
 };
 
+const obtenerIdForm = async (expediente_id) => {
+  try {
+    const response = await axios.get(`${API_URL}/formData/${expediente_id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener los casos:", error);
+    throw error;
+  }
+};
+
 const casosService = {
   obtenerCasos,
   crearCaso,
   obtenerDetalleCaso,
+  obtenerIdForm
 };
 
 export default casosService;

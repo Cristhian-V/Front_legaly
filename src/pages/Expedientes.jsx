@@ -9,7 +9,7 @@ const Expedientes = () => {
   const [busqueda, setBusqueda] = useState('');
   const [casos, setCasos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const { datosUsuario, catalogos } = useOutletContext();
+  const {  catalogos } = useOutletContext();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -80,7 +80,7 @@ const Expedientes = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Aquí luego llamaremos a casosService.crearCaso(formData)
-    const nuevoCaso = await casosService.crearCaso(formData);
+    await casosService.crearCaso(formData);
     // Recargamos la lista de casos para mostrar el nuevo caso creado
     await cargarDataCasos();
     // Cerramos el modal y limpiamos el formulario temporalmente
@@ -180,7 +180,7 @@ const Expedientes = () => {
 
       {/* --- VENTANA MODAL PARA NUEVO EXPEDIENTE --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md">
           {/* Contenedor del Formulario */}
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
             
