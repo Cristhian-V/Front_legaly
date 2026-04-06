@@ -36,7 +36,7 @@ const Expedientes = () => {
       const [respuestaCasos] = await Promise.all([
         casosService.obtenerCasos()
       ]);
-      console.log("Casos obtenidos del backend: ", respuestaCasos.casos);
+      
       setCasos(respuestaCasos.casos);
 
     } catch (error) {
@@ -134,6 +134,7 @@ const Expedientes = () => {
                 <th className="p-4 font-semibold">ID Expediente</th>
                 <th className="p-4 font-semibold">Título del Caso</th>
                 <th className="p-4 font-semibold">Cliente</th>
+                <th className="p-4 font-semibold">Area Legal</th>
                 <th className="p-4 font-semibold">Fecha Inicio</th>
                 <th className="p-4 font-semibold">Responsable</th>
                 <th className="p-4 font-semibold text-center">Estado</th>
@@ -147,6 +148,7 @@ const Expedientes = () => {
                     <td className="p-4 font-mono text-sm text-blue-600 font-semibold">{caso.expediente_id}</td>
                     <td className="p-4 text-gray-800 font-medium">{caso.descripcion_corta}</td>
                     <td className="p-4 text-gray-600">{caso.cliente_nombre}</td>
+                    <td className="p-4 text-gray-600">{caso.area_legal}</td>
                     <td className="p-4 text-gray-500 text-sm">{caso.fecha_apertura}</td>
                     <td className="p-4 text-gray-600">{caso.responsable_nombre}</td>
                     <td className="p-4 text-center">
@@ -156,7 +158,7 @@ const Expedientes = () => {
                     </td>
                     <td className="p-4 text-center">
                       <button
-                        onClick={() => navigate(`/expedientes/${caso.expediente_id}`)} // <-- AÑADIR ESTO
+                        onClick={() => navigate(`/expedientes/${caso.expediente_id}`)} 
                         className="text-blue-600 hover:text-blue-900 font-medium text-sm px-3 py-1 rounded hover:bg-blue-50 transition"
                       >
                         Ver Detalle

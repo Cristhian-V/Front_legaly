@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import casosService from '../services/casosService';
+import authService from '../services/authService';
 
 const DetalleExpediente = () => {
   const { id } = useParams(); // Capturamos el ID de la URL
@@ -7,23 +9,33 @@ const DetalleExpediente = () => {
   
   // Estado para manejar qué pestaña está activa
   const [pestañaActiva, setPestañaActiva] = useState('general');
+  const [detalleCaso, setDetalleCaso] = useState({})
 
-  // Datos simulados (Más adelante se cargarán con un fetch usando el 'id')
-  const caso = {
-    expediente_id: id || 'EXP-2024-001',
-    titulo: 'Revisión Contrato de Servicios - TechSolutions',
-    categoria: 'Corporativo',
-    estado: 'Activo',
-    descripcion: 'Revisión exhaustiva del contrato de prestación de servicios tecnológicos propuesto por el proveedor internacional. Se requiere análisis de cláusulas de responsabilidad civil, propiedad intelectual del código fuente y SLA.',
-    cliente: 'TechSolutions S.A.',
-    contraparte: 'CloudServices Inc.',
-    fecha_inicio: '01 Oct 2024',
-    fecha_vencimiento: '2024-12-15',
-    sub_estado: 'En Revisión',
-    sub_estado_desc: 'Esperando feedback de socio',
-    progreso: 75,
-    documentos_count: 12
+  const autenticado = async () => {
+    const esAuth = await authService.isAuthenticated();
+    if (!esAuth) {
+      navigate('/login');
+    }
   };
+
+  const cargarDetalleCaso = async () => {
+    try {
+      // Promise.all ejecuta ambas peticiones al mismo tiempo y espera a que LAS DOS terminen
+      const respuestaDetalleCaso = await (
+        casosService.obtenerDetalleCaso(id)
+      );
+      console.log(respuestaDetalleCaso)
+      setDetalleCaso(respuestaDetalleCaso);
+      
+    } catch (error) {
+      console.error("Error al cargar los datos del caso:", error);
+    } 
+  };
+
+  useEffect(() => {
+    cargarDetalleCaso();
+    autenticado();
+  }, []);
 
   // Clases para las pestañas
   const tabStyle = "pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ";
@@ -45,18 +57,18 @@ const DetalleExpediente = () => {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
           <span className="px-3 py-1 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-600">
-            {caso.categoria}
+            {detalleCaso.caso?.categoria_cliente}
           </span>
           <span className="px-3 py-1 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-600">
-            {caso.expediente_id}
+            {detalleCaso.caso?.expediente_id}
           </span>
           <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
-            {caso.estado}
+            {detalleCaso.caso?.estado}
           </span>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-3xl font-black text-[#080E21]">{caso.titulo}</h1>
+          <h1 className="text-3xl font-black text-[#080E21]">{detalleCaso.caso?.titulo} - {detalleCaso.caso?.nombre_cliente}</h1>
           <div className="flex gap-3">
             <button className="px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition shadow-sm">
               Editar
@@ -80,7 +92,7 @@ const DetalleExpediente = () => {
           onClick={() => setPestañaActiva('documentos')}
           className={pestañaActiva === 'documentos' ? activeTabStyle : inactiveTabStyle}
         >
-          Documentos ({caso.documentos_count})
+          Documentos (espera de conteto de documentos)
         </button>
         <button 
           onClick={() => setPestañaActiva('equipo')}
@@ -106,7 +118,7 @@ const DetalleExpediente = () => {
             <div className="mb-8">
               <h3 className="text-lg font-bold text-[#080E21] mb-4">Descripción del Caso</h3>
               <p className="text-gray-600 leading-relaxed text-sm">
-                {caso.descripcion}
+                {detalleCaso.caso?.descripcion}
               </p>
             </div>
 
@@ -115,20 +127,20 @@ const DetalleExpediente = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-4">
               <div>
                 <h4 className="text-sm font-bold text-[#080E21] mb-1">Cliente</h4>
-                <p className="text-gray-600">{caso.cliente}</p>
+                <p className="text-gray-600">{detalleCaso.caso?.nombre_cliente}</p>
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#080E21] mb-1">Contraparte</h4>
-                <p className="text-gray-600">{caso.contraparte}</p>
+                <p className="text-gray-600">{detalleCaso.caso?.contraparte}</p>
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#080E21] mb-1">Fecha de Inicio</h4>
-                <p className="text-gray-600">{caso.fecha_inicio}</p>
+                <p className="text-gray-600">{detalleCaso.caso?.fecha_inicio}</p>
               </div>
               <div>
                 <h4 className="text-sm font-bold text-[#080E21] mb-1">Vencimiento</h4>
                 {/* En rojo simulando que es una fecha próxima/crítica */}
-                <p className="text-red-500 font-semibold">{caso.fecha_vencimiento}</p>
+                <p className="text-red-500 font-semibold">Esperando fecha VEN</p>
               </div>
             </div>
           </div>
@@ -140,20 +152,20 @@ const DetalleExpediente = () => {
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 flex items-start gap-3 mb-8">
               <span className="text-gray-400 text-xl mt-0.5">🕒</span>
               <div>
-                <h4 className="font-bold text-[#080E21] text-sm">{caso.sub_estado}</h4>
-                <p className="text-gray-500 text-xs mt-1">{caso.sub_estado_desc}</p>
+                <h4 className="font-bold text-[#080E21] text-sm">esperando historial</h4>
+                <p className="text-gray-500 text-xs mt-1">esperando historial</p>
               </div>
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-600">Progreso estimado</span>
-                <span className="text-sm font-bold text-[#080E21]">{caso.progreso}%</span>
+                <span className="text-sm font-bold text-[#080E21]">esperando detalle historial</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div 
                   className="bg-[#212A3E] h-2.5 rounded-full" 
-                  style={{ width: `${caso.progreso}%` }}
+                  style={{ width: `esperando historial` }}
                 ></div>
               </div>
             </div>
