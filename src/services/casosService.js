@@ -69,6 +69,8 @@ const modificarCaso = async (id, casoData) => {
   }
 };
 
+
+
 const casosService = {
   obtenerCasos,
   crearCaso,
