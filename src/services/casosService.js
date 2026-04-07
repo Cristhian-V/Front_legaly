@@ -52,11 +52,29 @@ const obtenerIdForm = async (expediente_id) => {
   }
 };
 
+const modificarCaso = async (id, casoData) => {
+  try {
+    const response = await axios.put(`${API_URL}/${id}`, {
+      area_legal_id: +casoData.areaLegal,
+      cliente_id: +casoData.cliente,
+      responsable_id: +casoData.responsable,
+      descripcion_corta: casoData.titulo,
+      descripcion_completa: casoData.descripcion,
+      contraparte: casoData.contraparte,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al modificar el caso:", error);
+    throw error;
+  }
+};
+
 const casosService = {
   obtenerCasos,
   crearCaso,
   obtenerDetalleCaso,
-  obtenerIdForm
+  obtenerIdForm,
+  modificarCaso,
 };
 
 export default casosService;

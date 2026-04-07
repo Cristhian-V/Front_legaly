@@ -86,11 +86,10 @@ const DetalleExpediente = () => {
 
   // 3. Guardar cambios
   const handleGuardarEdicion = async (e) => {
-    e.preventDefault();
-    console.log("Datos editados a enviar:", formData);
-    
+    e.preventDefault();   
     try {
-      // Aquí llamarías a tu servicio: await casosService.actualizarCaso(id, formData);
+
+      await casosService.modificarCaso( id, formData);
       
       // Cerramos el modal
       setIsEditModalOpen(false);
