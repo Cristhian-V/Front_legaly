@@ -5,11 +5,11 @@ import authService from '../services/authService';
 import docsService from '../services/docsService';
 
 const DetalleExpediente = () => {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // Obtenemos los catálogos desde el Layout para los selects de edición
-  const { catalogos, datosUsuario } = useOutletContext() || {}; 
+  const { catalogos, datosUsuario } = useOutletContext() || {};
 
   // --- ESTADOS PESTAÑAS ---
   const [pestañaActiva, setPestañaActiva] = useState('general');
@@ -49,12 +49,12 @@ const DetalleExpediente = () => {
       setDetalleCaso(respuestaDetalleCaso);
     } catch (error) {
       console.error("Error al cargar los datos del caso:", error);
-    } 
+    }
   };
 
   const cargarDocumentos = async () => {
     try {
-      const respuestaDocumentos = await docsService.obtenerDocumentosCaso(id); 
+      const respuestaDocumentos = await docsService.obtenerDocumentosCaso(id);
       console.log("Documentos obtenidos del backend:", respuestaDocumentos); // <-- LOG PARA VER QUÉ LLEGA
       setDocumentos(respuestaDocumentos);
     } catch (error) {
@@ -68,10 +68,10 @@ const DetalleExpediente = () => {
       setIdForm(respuestaIdForm);
     } catch (error) {
       console.error("Error al cargar el ID del formulario:", error);
-    } 
+    }
   };
 
-  useEffect(() => {    
+  useEffect(() => {
     autenticado();
     cargarDetalleCaso();
     cargarIdForm();
@@ -108,14 +108,14 @@ const DetalleExpediente = () => {
 
   // 3. Guardar cambios
   const handleGuardarEdicion = async (e) => {
-    e.preventDefault();   
+    e.preventDefault();
     try {
 
-      await casosService.modificarCaso( id, formData);
-      
+      await casosService.modificarCaso(id, formData);
+
       // Cerramos el modal
       setIsEditModalOpen(false);
-      
+
       // Recargamos los datos para que se vea el cambio reflejado inmediatamente
       cargarDetalleCaso();
     } catch (error) {
@@ -150,18 +150,18 @@ const DetalleExpediente = () => {
     if (!tipoDocumento) {
       alert("Por favor selecciona el tipo de documento.");
       return;
-    }try {
+    } try {
       // 1. Creamos el FormData (Es como un sobre de correo para archivos pesados)
       const formData = new FormData();
-      
+
       // 'archivo' debe llamarse exactamente igual que en upload.single('archivo') del backend
-      formData.append('archivo', archivoSeleccionado); 
-      
+      formData.append('archivo', archivoSeleccionado);
+
       // También podemos enviar datos de texto extra en el mismo "sobre"
-      
+
       formData.append('tipoDocumento', tipoDocumento);
       formData.append('expediente_id', id); // El ID de la URL
-      formData.append('usuario_id', datosUsuario?.id); 
+      formData.append('usuario_id', datosUsuario?.id);
       formData.append('pesoMB', archivoSeleccionado.size / (1024 * 1024));
       // 2. Enviamos el formulario al backend con la función que creamos en docsService
       await docsService.subirDocumentoCaso(formData);
@@ -170,7 +170,7 @@ const DetalleExpediente = () => {
       setArchivoSeleccionado(null);
       setTipoDocumento('');
       setIsUploadModalOpen(false);
-      
+
       // OPCIONAL: Volver a cargar el detalle del caso para que el archivo aparezca en la tabla
       cargarDocumentos();
 
@@ -178,18 +178,38 @@ const DetalleExpediente = () => {
       // AQUÍ ATRAPAMOS EL MENSAJE ESPECÍFICO DEL BACKEND
       if (error.response && error.response.data && error.response.data.error) {
         // Mostrará: "El archivo que quiere subir ya está en el sistema."
-        alert(error.response.data.error); 
+        alert(error.response.data.error);
       } else {
         alert("Hubo un error al intentar conectar con el servidor.");
       }
     }
   };
 
+  const handleVerDocumento = (rutaArchivo) => {
+    // Si url_archivo viene vacío o nulo de la base de datos
+    if (!rutaArchivo) {
+      alert("Este documento no tiene una ruta de archivo válida asociada.");
+      return;
+    }
+
+    // Usamos encodeURIComponent para proteger los espacios y barras de la ruta
+    const urlDelArchivo = `http://localhost:3000/api/docs/ver?ruta=${encodeURIComponent(rutaArchivo)}`;
+
+    window.open(urlDelArchivo, '_blank');
+  };
+
+  const handleEliminarDocumento = async (docId) => {
+    // Si url_archivo viene vacío o nulo de la base de datos
+    
+    await docsService.eliminarDocumentoCaso(docId)
+    cargarDocumentos();
+  };
+
   return (
     <main className="p-8 max-w-7xl mx-auto relative">
-      
+
       {/* Botón Volver */}
-      <button 
+      <button
         onClick={() => navigate('/expedientes')}
         className="flex items-center text-gray-500 hover:text-[#080E21] font-medium text-sm mb-6 transition-colors"
       >
@@ -214,7 +234,7 @@ const DetalleExpediente = () => {
           <h1 className="text-3xl font-black text-[#080E21]">{detalleCaso.caso?.titulo} - {detalleCaso.caso?.nombre_cliente}</h1>
           <div className="flex gap-3">
             {/* BOTÓN EDITAR CONECTADO AL MODAL */}
-            <button 
+            <button
               onClick={abrirModalEdicion}
               className="px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition shadow-sm"
             >
@@ -238,7 +258,7 @@ const DetalleExpediente = () => {
       {/* Contenido de la Pestaña: Información General */}
       {pestañaActiva === 'general' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
             <div className="mb-8">
               <h3 className="text-lg font-bold text-[#080E21] mb-4">Descripción del Caso</h3>
@@ -285,7 +305,7 @@ const DetalleExpediente = () => {
       {/* Contenido de la Pestaña: Documentos */}
       {pestañaActiva === 'documentos' && (
         <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-          
+
           {/* Cabecera de la sección */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
@@ -293,7 +313,7 @@ const DetalleExpediente = () => {
               <p className="text-sm text-gray-500">Gestiona los archivos y pruebas de este caso</p>
             </div>
             {/* Botón principal para subir documentos (Siempre visible) */}
-            <button 
+            <button
               onClick={() => setIsUploadModalOpen(true)} // <-- AÑADIR ESTO
               className="bg-[#0F172A] hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition flex items-center gap-2 text-sm"
             >
@@ -303,7 +323,7 @@ const DetalleExpediente = () => {
 
           {/* Renderizado Condicional: ¿Hay documentos en el backend? */}
           {(!documentos.documentacion || documentos.documentacion.length === 0) ? (
-            
+
             /* --- VISTA 1: NO HAY DOCUMENTOS (Empty State) --- */
             <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
               <span className="text-5xl mb-4 grayscale opacity-60">📄</span>
@@ -311,7 +331,7 @@ const DetalleExpediente = () => {
               <p className="text-gray-500 mb-6 max-w-md">
                 No se encontró ningún documento relacionado a este caso. Te sugerimos <strong className="text-gray-700">subir la carátula del caso como primer documento</strong> para comenzar a armar el expediente.
               </p>
-              <button 
+              <button
                 onClick={() => setIsUploadModalOpen(true)} // <-- AÑADIR ESTO
                 className="bg-white border border-gray-300 hover:bg-gray-50 text-[#080E21] font-bold py-2.5 px-6 rounded-lg shadow-sm transition flex items-center gap-2"
               >
@@ -353,10 +373,15 @@ const DetalleExpediente = () => {
                       <td className="p-4 text-sm text-gray-600">{doc.fecha_subida}</td>
                       <td className="p-4 text-sm text-gray-600">{doc.responsable}</td>
                       <td className="p-4 text-right">
-                        <button className="text-blue-600 hover:text-blue-900 font-semibold text-sm px-3 py-1.5 rounded hover:bg-blue-100 transition mr-2">
+                        <button
+                          onClick={() => handleVerDocumento(doc.url_archivo)}
+                          className="text-blue-600 hover:text-blue-900 font-semibold text-sm px-3 py-1.5 rounded hover:bg-blue-100 transition mr-2"
+                        >
                           Ver
                         </button>
-                        <button className="text-gray-500 hover:text-red-600 font-semibold text-sm px-3 py-1.5 rounded hover:bg-red-50 transition opacity-0 group-hover:opacity-100">
+                        <button 
+                        onClick={() => handleEliminarDocumento(doc.id)}
+                        className="text-gray-500 hover:text-red-600 font-semibold text-sm px-3 py-1.5 rounded hover:bg-red-50 transition opacity-0 group-hover:opacity-100">
                           Eliminar
                         </button>
                       </td>
@@ -378,7 +403,7 @@ const DetalleExpediente = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md">
           {/* Contenedor del Formulario */}
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
-            
+
             <div className="bg-[#080E21] px-6 py-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-white">Crear Nuevo Expediente</h2>
               <button onClick={() => setIsEditModalOpen(false)} className="text-gray-300 hover:text-white text-2xl font-light">×</button>
@@ -386,11 +411,11 @@ const DetalleExpediente = () => {
 
             <form onSubmit={handleGuardarEdicion} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
+
                 {/* Título */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Título / Descripción Corta *</label>
-                  <input type="text" name="titulo" required value={formData.titulo} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej. Demanda Laboral Juan Pérez"/>
+                  <input type="text" name="titulo" required value={formData.titulo} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej. Demanda Laboral Juan Pérez" />
                 </div>
 
                 {/* Cliente (Catálogo) */}
@@ -408,7 +433,7 @@ const DetalleExpediente = () => {
                 {/* Contraparte */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Contraparte</label>
-                  <input type="text" name="contraparte" value={formData.contraparte} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nombre de la contraparte"/>
+                  <input type="text" name="contraparte" value={formData.contraparte} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nombre de la contraparte" />
                 </div>
 
                 {/* Área Legal (Catálogo) */}
@@ -457,15 +482,15 @@ const DetalleExpediente = () => {
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up">
-            
+
             <div className="bg-[#080E21] px-6 py-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-white">Subir Nuevo Documento</h2>
-              <button 
+              <button
                 onClick={() => {
                   setIsUploadModalOpen(false);
                   setArchivoSeleccionado(null);
                   setTipoDocumento('');
-                }} 
+                }}
                 className="text-gray-300 hover:text-white text-2xl font-light"
               >
                 ×
@@ -473,7 +498,7 @@ const DetalleExpediente = () => {
             </div>
 
             <form onSubmit={handleUploadSubmit} className="p-6">
-              
+
               {/* Campo Usuario (Fijo/Bloqueado) */}
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Usuario que sube el archivo</label>
@@ -485,10 +510,10 @@ const DetalleExpediente = () => {
               {/* Categoría / Tipo de Documento */}
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de Documento *</label>
-                <select 
-                  required 
-                  value={catalogos.catalogos?.tipos_documento?.find(tipo => tipo.id === tipoDocumento)?.id || tipoDocumento} 
-                  onChange={(e) => setTipoDocumento(e.target.value)} 
+                <select
+                  required
+                  value={catalogos.catalogos?.tipos_documento?.find(tipo => tipo.id === tipoDocumento)?.id || tipoDocumento}
+                  onChange={(e) => setTipoDocumento(e.target.value)}
                   className="w-full p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="">Seleccione una categoría...</option>
@@ -499,21 +524,20 @@ const DetalleExpediente = () => {
               </div>
 
               {/* ZONA DE DRAG & DROP */}
-              <div 
+              <div
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                  archivoSeleccionado ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                }`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${archivoSeleccionado ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                  }`}
               >
                 {/* Input file oculto */}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                  accept=".pdf,.doc,.docx,.jpg,.png" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.jpg,.png"
                 />
 
                 {archivoSeleccionado ? (
@@ -525,8 +549,8 @@ const DetalleExpediente = () => {
                     <p className="text-xs text-gray-500 mt-1">
                       {(archivoSeleccionado.size / (1024 * 1024)).toFixed(2)} MB
                     </p>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation(); // Evita que se abra el explorador al hacer clic en eliminar
                         setArchivoSeleccionado(null);
@@ -547,23 +571,22 @@ const DetalleExpediente = () => {
 
               {/* Botones de acción */}
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => {
                     setIsUploadModalOpen(false);
                     setArchivoSeleccionado(null);
                     setTipoDocumento('');
-                  }} 
+                  }}
                   className="px-5 py-2 text-gray-600 font-semibold rounded hover:bg-gray-100 transition"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={!archivoSeleccionado}
-                  className={`px-5 py-2 text-white font-semibold rounded shadow transition ${
-                    archivoSeleccionado ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
-                  }`}
+                  className={`px-5 py-2 text-white font-semibold rounded shadow transition ${archivoSeleccionado ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
+                    }`}
                 >
                   Subir y Guardar
                 </button>

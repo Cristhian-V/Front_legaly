@@ -35,9 +35,21 @@ const subirDocumentoCaso = async (formData) => {
   }
 };
 
+const eliminarDocumentoCaso = async (docId) => {
+  try {
+    const response = await axios.delete(`http://localhost:3000/api/docs/${docId}/eliminar`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al eliminar el documento:", error);
+    throw error;
+  }
+};
+
+
 const docsService = {
   obtenerDocumentosCaso,
   subirDocumentoCaso,
+  eliminarDocumentoCaso,
 };
 
 export default docsService;
