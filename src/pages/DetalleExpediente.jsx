@@ -36,6 +36,56 @@ const DetalleExpediente = () => {
     contraparte: ''
   });
 
+  // --- ESTADOS PARA EQUIPO LEGAL ---
+  const [isEquipoModalOpen, setIsEquipoModalOpen] = useState(false);
+  const [equipoCaso, setEquipoCaso] = useState([]);
+  const [nuevoMiembro, setNuevoMiembro] = useState({
+    abogado_id: '',
+    rol_en_caso: 'Abogado Asociado'
+  });
+
+  // --- FUNCIÓN PARA AÑADIR MIEMBRO ---
+  const handleAddMiembro = async (e) => {
+    e.preventDefault();
+    if (!nuevoMiembro.abogado_id) {
+      alert("Por favor selecciona un abogado.");
+      return;
+    }
+
+    console.log("Añadiendo al equipo:", nuevoMiembro);
+    
+    try {
+      // TODO: Aquí harás el POST a tu backend para guardar la relación (ej. tabla caso_abogado)
+      // await axios.post(`http://localhost:3000/api/casos/${id}/equipo`, nuevoMiembro, { withCredentials: true });
+
+      alert("Abogado añadido al equipo exitosamente.");
+      
+      // Limpiamos y cerramos
+      setNuevoMiembro({ abogado_id: '', rol_en_caso: 'Abogado Asociado' });
+      setIsEquipoModalOpen(false);
+      
+      // Recargamos el caso para ver la nueva tarjeta
+      // cargarDetalleCaso();
+    } catch (error) {
+      console.error("Error al añadir miembro:", error);
+      alert("Hubo un error al asignar el abogado al caso.");
+    }
+  };
+
+  const handleEliminarMiembro = async (abogado_id, nombre) => {
+    const confirmar = window.confirm(`¿Estás seguro de que deseas quitar a ${nombre} de este caso?`);
+    if (!confirmar) return;
+
+    try {
+      // TODO: Aquí harás el DELETE a tu backend
+      // await axios.delete(`http://localhost:3000/api/casos/${id}/equipo/${abogado_id}`, { withCredentials: true });
+      alert("Abogado removido del equipo.");
+      // cargarDetalleCaso();
+    } catch (error) {
+      alert("Error al remover al abogado.");
+    }
+  };
+
   const autenticado = async () => {
     const esAuth = await authService.isAuthenticated();
     if (!esAuth) {
@@ -71,10 +121,20 @@ const DetalleExpediente = () => {
     }
   };
 
+  const cargarEquipoCaso = async () => {
+    try {
+      const respuestaEquipoCaso = await casosService.obtenerEquipoCaso(id);
+      setEquipoCaso(respuestaEquipoCaso);
+    } catch (error) {
+      console.error("Error al cargar el equipo del caso:", error);
+    }
+  };
+
   useEffect(() => {
     autenticado();
     cargarDetalleCaso();
     cargarIdForm();
+    cargarEquipoCaso();
     cargarDocumentos();
   }, [id]); // Agregamos 'id' a las dependencias por buena práctica
 
@@ -395,7 +455,89 @@ const DetalleExpediente = () => {
         </div>
       )}
 
-      {pestañaActiva === 'equipo' && <div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-200">Sección de Equipo en construcción...</div>}
+      {/* Contenido de la Pestaña: Equipo Legal */}
+      {pestañaActiva === 'equipo' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
+          
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-[#080E21]">Equipo Legal Asignado</h3>
+              <p className="text-sm text-gray-500">Abogados y personal trabajando en este expediente</p>
+            </div>
+            <button 
+              onClick={() => setIsEquipoModalOpen(true)}
+              className="bg-[#0F172A] hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition flex items-center gap-2 text-sm"
+            >
+              <span>+</span> Añadir al Equipo
+            </button>
+          </div>
+
+          {/* Renderizado Condicional del Equipo */}
+          {(!detalleCaso.equipo || detalleCaso.equipo.length === 0) ? (
+            
+            /* Vista Vacía */
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+              <span className="text-5xl mb-4 grayscale opacity-60">👥</span>
+              <h4 className="text-xl font-bold text-[#080E21] mb-2">No hay equipo asignado</h4>
+              <p className="text-gray-500 mb-6 max-w-md">
+                Actualmente solo tú tienes acceso a este caso. Añade a otros colegas o asistentes para colaborar en el expediente.
+              </p>
+              <button 
+                onClick={() => setIsEquipoModalOpen(true)}
+                className="bg-white border border-gray-300 hover:bg-gray-50 text-[#080E21] font-bold py-2.5 px-6 rounded-lg shadow-sm transition flex items-center gap-2"
+              >
+                <span>+</span> Asignar Colega
+              </button>
+            </div>
+
+          ) : (
+
+            /* Grid de Tarjetas de Presentación */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {equipoCaso.equipo.map((miembro, index) => (
+                <div key={index} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative group flex flex-col items-center text-center">
+                  
+                  {/* Botón de eliminar (Aparece en hover) */}
+                  {console.log("Miembro del equipo:", equipoCaso)}
+                  <button 
+                    onClick={() => handleEliminarMiembro(miembro.id, miembro.nombre_completo)}
+                    className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1"
+                    title="Remover del caso"
+                  >
+                    ❌
+                  </button>
+
+                  {/* Avatar */}
+                  <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-gray-200 mb-4 overflow-hidden">
+                    <img 
+                      src={miembro.avatar_url || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"} 
+                      alt={`Avatar de ${miembro.nombre_completo}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Información del Abogado */}
+                  <h4 className="font-bold text-[#080E21] text-lg mb-1">{miembro.nombre_completo}</h4>
+                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-blue-100">
+                    {miembro.descripcion_titulo || 'Abogado'}
+                  </span>
+
+                  <div className="w-full pt-4 border-t border-gray-100 mt-auto">
+                    <p className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-2">
+                      <span>✉️</span> {miembro.email || 'Sin correo'}
+                    </p>
+                    <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
+                      <span>📱</span> {miembro.telefono || 'Sin teléfono'}
+                    </p>
+                  </div>
+
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {pestañaActiva === 'historial' && <div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-200">Sección de Historial en construcción...</div>}
 
       {/* --- MODAL DE EDICIÓN CON GLASSMORPHISM --- */}
@@ -589,6 +731,80 @@ const DetalleExpediente = () => {
                     }`}
                 >
                   Subir y Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL PARA AÑADIR EQUIPO LEGAL --- */}
+      {isEquipoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
+            
+            <div className="bg-[#080E21] px-6 py-4 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white">Asignar al Equipo</h2>
+              <button 
+                onClick={() => {
+                  setIsEquipoModalOpen(false);
+                  setNuevoMiembro({ abogado_id: '', rol_en_caso: 'Abogado Asociado' });
+                }} 
+                className="text-gray-300 hover:text-white text-2xl font-light"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAddMiembro} className="p-6">
+              
+              {/* Selección del Abogado */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Seleccionar Colega *</label>
+                <select 
+                  required 
+                  value={nuevoMiembro.abogado_id} 
+                  onChange={(e) => setNuevoMiembro({...nuevoMiembro, abogado_id: e.target.value})} 
+                  className="w-full p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="">Buscar abogado...</option>
+                  {/* Aquí usamos el catálogo de abogados que viene del Layout */}
+                  {catalogos?.abogados?.map((abogado, i) => (
+                    <option key={i} value={abogado.id}>{abogado.nombre} - {abogado.especialidad || 'Abogado'}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rol en el Caso */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Rol en este expediente *</label>
+                <select 
+                  required 
+                  value={nuevoMiembro.rol_en_caso} 
+                  onChange={(e) => setNuevoMiembro({...nuevoMiembro, rol_en_caso: e.target.value})} 
+                  className="w-full p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="Socio Principal">Socio Principal</option>
+                  <option value="Abogado Asociado">Abogado Asociado</option>
+                  <option value="Paralegal">Paralegal / Asistente</option>
+                  <option value="Auditor Legal">Auditor Legal</option>
+                </select>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEquipoModalOpen(false)} 
+                  className="px-5 py-2 text-gray-600 font-semibold rounded hover:bg-gray-100 transition"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded shadow transition"
+                >
+                  Añadir al Caso
                 </button>
               </div>
             </form>

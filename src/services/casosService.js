@@ -69,6 +69,20 @@ const modificarCaso = async (id, casoData) => {
   }
 };
 
+const obtenerEquipoCaso = async (expediente_id) => {
+  try {
+    const response = await axios.get(`${API_URL}/equipo`, {
+      params: {
+        expediente_id: expediente_id
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener el equipo del caso:", error);
+    throw error;
+  };
+};
+
 
 
 const casosService = {
@@ -77,6 +91,7 @@ const casosService = {
   obtenerDetalleCaso,
   obtenerIdForm,
   modificarCaso,
+  obtenerEquipoCaso,
 };
 
 export default casosService;
