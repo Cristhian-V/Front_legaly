@@ -69,7 +69,7 @@ const Layout = () => {
             <button onClick={() => navigate('/dashboard')} className={getNavStyle('/dashboard')}>Inicio</button>
             <button onClick={() => navigate('/expedientes')} className={getNavStyle('/expedientes')}>Expedientes</button>
             <button className={getNavStyle('/clientes')}>Clientes</button>
-            <button className={getNavStyle('/calendario')}>Calendario</button>
+            <button className={getNavStyle('/calendario')}>Documentos Pendientes</button>
           </div>
           <div className="pt-4 border-t border-gray-800 space-y-2">
             <button className={getNavStyle('/configuracion')}>Configuración</button>

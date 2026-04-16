@@ -45,11 +45,23 @@ const eliminarDocumentoCaso = async (docId) => {
   }
 };
 
+const subirNuevaVersion = async (documentoId, formData) => {
+  // Asegúrate de enviar los headers correctos para archivos (multipart/form-data)
+  const response = await axios.post(`${API_URL}/${documentoId}/nueva_version`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    withCredentials: true
+  });
+  return response.data;
+};
+
 
 const docsService = {
   obtenerDocumentosCaso,
   subirDocumentoCaso,
   eliminarDocumentoCaso,
+  subirNuevaVersion
 };
 
 export default docsService;

@@ -83,6 +83,44 @@ const obtenerEquipoCaso = async (expediente_id) => {
   };
 };
 
+const addMiembroEquipo = async (expediente_id, abogado_id) => {
+  try {
+    const response = await axios.post(`${API_URL}/equipo`, {
+      expediente_id,
+      usuario_id : abogado_id
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al agregar miembro al equipo:", error);
+    throw error;
+  };
+}
+
+const eliminarMiembroEquipo = async (expediente_id, abogado_id) => {
+  try {
+    const response = await axios.delete(`${API_URL}/equipo`, {
+      data: {
+        expediente_id,
+        usuario_id: abogado_id
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al eliminar miembro del equipo:", error);
+    throw error;
+  }
+};
+
+// Añade esto a tu casosService.js
+const obtenerHistorialCaso = async (id) => {
+  try {
+  const response = await axios.get(`${API_URL}/${id}/historial`);
+  return response.data;
+    } catch (error) {
+    console.error("Error al eliminar miembro del equipo:", error);
+    throw error;
+  }
+};
 
 
 const casosService = {
@@ -92,6 +130,9 @@ const casosService = {
   obtenerIdForm,
   modificarCaso,
   obtenerEquipoCaso,
+  addMiembroEquipo,
+  eliminarMiembroEquipo,
+  obtenerHistorialCaso
 };
 
 export default casosService;
