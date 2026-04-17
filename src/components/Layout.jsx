@@ -13,6 +13,7 @@ const Layout = () => {
     rol: 'Cargando...', nombre_completo: 'Abogado', avatar_url: ''
   });
   const [catalogos, setCatalogos] = useState();
+  const [casosPendientes, setCasosPendientes] = useState({});
 
   const [cargando, setCargando] = useState(true);
 
@@ -24,11 +25,23 @@ const Layout = () => {
         if (respuestaPerfil && respuestaPerfil.dataUsuario) {
           setDatosUsuario(respuestaPerfil.dataUsuario);
         }
+        
+        // Peticiones paralelas para que cargue más rápido y aislemos errores
+        const [dataRevisiones, respuestaCatalogos] = await Promise.all([
+          userService.obtenerCasosPendientes().catch(() => ({ casos_pendientes: 0 })), // Si falla, devolvemos 0 por defecto
+          listadoService.traerListados().catch(() => ({})) // Si falla, devolvemos objeto vacío
+        ]);
 
-        const respuestaCatalogos = await listadoService.traerListados();
         setCatalogos(respuestaCatalogos);
-      } catch  {
-        handleLogout();
+        setCasosPendientes(dataRevisiones);
+
+      } catch (error) {
+        console.error("Error crítico al cargar el Layout:", error);
+        
+        // Solo deslogueamos si el servidor nos dice explícitamente que el token es inválido (Error 401 o 403)
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+           handleLogout();
+        }
       } finally {
         setCargando(false);
       }
@@ -68,6 +81,7 @@ const Layout = () => {
           <div className="flex-grow space-y-2">
             <button onClick={() => navigate('/dashboard')} className={getNavStyle('/dashboard')}>Inicio</button>
             <button onClick={() => navigate('/expedientes')} className={getNavStyle('/expedientes')}>Expedientes</button>
+            <button onClick={() => navigate('/revisiones')} className={getNavStyle('/revisiones')}>Bandeja de Revisiones</button>
             <button className={getNavStyle('/clientes')}>Clientes</button>
             <button className={getNavStyle('/calendario')}>Documentos Pendientes</button>
           </div>
@@ -108,7 +122,7 @@ const Layout = () => {
 
         {/* AQUÍ SE INYECTA EL CONTENIDO DINÁMICO (Inicio o Expedientes) */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          <Outlet context={{ datosUsuario, catalogos }} />
+          <Outlet context={{ datosUsuario, catalogos , casosPendientes}} />
         </div>
       </div>
     </div>

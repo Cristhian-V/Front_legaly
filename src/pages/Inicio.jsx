@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 
 // Importamos el servicio
 import authService from '../services/authService';
@@ -9,6 +10,7 @@ import userService from '../services/userService';
 import iconCasos from '../image/IconCasos.png';
 import iconAudiencias from '../image/IconAdiencias.png';
 import iconDocs from '../image/IconDocPendientes.png';
+import iconRevisar from '../image/IconRevisar.png';
 
 // --- DATOS SIMULADOS DE EVENTOS ---
 // En el futuro, esto vendrá de userService.obtenerEventos()
@@ -35,6 +37,8 @@ const Inicio = () => {
   const [datosUsuario, setDatosUsuario] = useState({});
   const [eventos, setEventos] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const {  casosPendientes } = useOutletContext();
+
 
   // --- ESTADOS DEL CALENDARIO ---
   const [diaSeleccionado, setDiaSeleccionado] = useState(null); // Día expandido
@@ -42,6 +46,7 @@ const Inicio = () => {
   const autenticado = async () => {
     const esAuth = await authService.isAuthenticated();
     if (!esAuth) {
+      console.log("Usuario no autenticado, redirigiendo al login...");
       navigate('/login');
     }
   };
@@ -103,16 +108,16 @@ const Inicio = () => {
 
   return (
     <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
 
         {/* 6. Tarjeta: Casos Activos */}
         <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Casos Activos</h3>
-              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario.casos.resumen.casosActivos}</p>
+              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos.resumen.casosActivos}</p>
             </div>
-            <img src={iconCasos} alt="Icono Casos" />
+            <img src={iconCasos} alt="Icono Casos" width="70" height="70"/>
           </div>
         </div>
 
@@ -121,9 +126,9 @@ const Inicio = () => {
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Audiencias / Plazos</h3>
-              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario.casos.resumen.eventosActivos}</p>
+              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos.resumen.eventosActivos}</p>
             </div>
-            <img src={iconAudiencias} alt="Icono Audiencias" />
+            <img src={iconAudiencias} alt="Icono Audiencias" width="70" height="70"/>
           </div>
         </div>
 
@@ -135,7 +140,22 @@ const Inicio = () => {
               <p className="text-4xl font-black text-gray-800 mt-2">esperando</p>
             </div>
             <div>
-              <img src={iconDocs} alt="Icono Documentos" />
+              <img src={iconDocs} alt="Icono Documentos" width="70" height="70"/>
+            </div>
+          </div>
+        </div>
+
+                {/* 8. Tarjeta: Revisiones pendientes por el usuario */}
+        <div onClick={() => navigate('/revisiones')}
+        className="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#A52019] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-gray-500 text-sm font-bold uppercase">Casos Pendientes de Revisar </h3>
+              {console.log("Casos Pendientes en el render:", casosPendientes)}
+              <p className="text-4xl font-black text-gray-800 mt-2">{casosPendientes?.casos_pendientes}</p>
+            </div>
+            <div>
+              <img src={iconRevisar} alt="Icono Revisar" width="70" height="70" />
             </div>
           </div>
         </div>

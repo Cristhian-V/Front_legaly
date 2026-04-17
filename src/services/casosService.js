@@ -122,6 +122,30 @@ const obtenerHistorialCaso = async (id) => {
   }
 };
 
+// envio de solicitudes para revisiones de casos
+const solicitarRevision = async (expediente_id, revisorSeleccionado, comentariosSolicitud, docsSeleccionados) => {
+  try {
+  const response = await axios.post(`${API_URL}/${expediente_id}/revisiones`, {
+    revisor_id: +revisorSeleccionado,
+    comentarios_solicitud: comentariosSolicitud,
+    documentos_ids: docsSeleccionados // Si está vacío [], el backend lo entiende como revisión general
+  });
+  return response.data;
+    } catch (error) {
+    console.error("Error al eliminar miembro del equipo:", error);
+    throw error;
+  }
+};
+
+const revisarCaso = async (expediente_id) => {
+  try {
+    const response = await axios.patch(`${API_URL}/revisiones/${expediente_id}/iniciar`,{});
+    return response.data;
+  } catch (error) {
+    console.error("Error al revisar el caso:", error);
+    throw error;
+  }
+};
 
 const casosService = {
   obtenerCasos,
@@ -132,7 +156,9 @@ const casosService = {
   obtenerEquipoCaso,
   addMiembroEquipo,
   eliminarMiembroEquipo,
-  obtenerHistorialCaso
+  obtenerHistorialCaso,
+  solicitarRevision,
+  revisarCaso
 };
 
 export default casosService;

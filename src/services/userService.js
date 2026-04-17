@@ -38,11 +38,22 @@ const obtenerEventos = async () => {
   }
 };
 
+const obtenerCasosPendientes = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/revisiones/pendientes`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener los casos pendientes:", error);
+    throw error;
+  }
+};
+
 
 const userService = {
   obtenerPerfil,
   obtenerCasos,
-  obtenerEventos
+  obtenerEventos,
+  obtenerCasosPendientes
 };
 
 export default userService;

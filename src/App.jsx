@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Inicio';
 import Expedientes from './pages/Expedientes';
 import DetalleExpediente from './pages/DetalleExpediente';
+import BandejaRevisiones from './pages/BandejaRevisiones';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/expedientes" element={<Expedientes />} />
             <Route path="/expedientes/:id" element={<DetalleExpediente />} />
+            <Route path="/revisiones" element={<BandejaRevisiones />} />
             {/* Aquí añadirás más adelante <Route path="/clientes" ... /> */}
           </Route>
         </Routes>

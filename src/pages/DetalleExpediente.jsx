@@ -30,6 +30,15 @@ const DetalleExpediente = () => {
   const [isEquipoModalOpen, setIsEquipoModalOpen] = useState(false);
   const [cargando, setCargando] = useState(true);
 
+// --- ESTADOS PARA ACCIONES Y REVISIONES ---
+  const [isAccionesOpen, setIsAccionesOpen] = useState(false);
+  const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  const [revisionData, setRevisionData] = useState({
+    revisor_id: '',
+    comentarios_solicitud: '',
+    documentos_ids: [] // Array para guardar los IDs de los documentos seleccionados
+  });
+
   // --- 3. ESTADOS DE FORMULARIOS ---
   const [formData, setFormData] = useState({
     cliente: '', titulo: '', descripcion: '', areaLegal: '', responsable: '', contraparte: ''
@@ -216,6 +225,53 @@ const handleGuardarEdicion = async (e) => {
     }
   };
 
+  // --- 8. LOGICA DE REVISIONES DE CASOS (ENVIO DE SOLICITUDES)
+  // Manejador para abrir el modal
+  const abrirModalRevision = () => {
+    setRevisionData({ revisor_id: '', comentarios_solicitud: '', documentos_ids: [] });
+    setIsRevisionModalOpen(true);
+    setIsAccionesOpen(false); // Cerramos el menú desplegable
+  };
+
+  // Manejador para los checkboxes de documentos
+  const handleDocCheckboxChange = (docId) => {
+    setRevisionData(prev => {
+      const yaSeleccionado = prev.documentos_ids.includes(docId);
+      if (yaSeleccionado) {
+        // Si ya estaba, lo quitamos del array
+        return { ...prev, documentos_ids: prev.documentos_ids.filter(id => id !== docId) };
+      } else {
+        // Si no estaba, lo añadimos
+        return { ...prev, documentos_ids: [...prev.documentos_ids, docId] };
+      }
+    });
+  };
+
+  // Manejador para enviar la solicitud al backend
+  const handleSolicitarRevision = async (e) => {
+    e.preventDefault();
+    if (!revisionData.revisor_id) return alert("Debes seleccionar un revisor.");
+
+    try {
+      // AQUÍ HACES EL POST A TU BACKEND
+      console.log("Datos a enviar para solicitud de revisión:", id, revisionData);
+      await casosService.solicitarRevision(id, revisionData.revisor_id, revisionData.comentarios_solicitud, revisionData.documentos_ids);
+      
+      console.log("Enviando al backend:", revisionData);
+      alert("Solicitud de revisión enviada exitosamente.");
+      
+      setIsRevisionModalOpen(false);
+      
+      // Opcional: Recargar el historial para que aparezca el evento de solicitud
+      // const resHistorial = await casosService.obtenerHistorialCaso(id);
+      // setHistorialCaso(resHistorial);
+
+    } catch (error) {
+      console.error("Error al solicitar revisión:", error);
+      alert("Hubo un error al enviar la solicitud.");
+    }
+  };
+
 // Función para obtener el emoji según la extensión del archivo
 const getFileIcon = (extension) => {
   // Limpiamos la extensión: la pasamos a minúsculas y le quitamos el punto si lo tiene
@@ -289,7 +345,51 @@ const getFileIcon = (extension) => {
           <h1 className="text-3xl font-black text-[#080E21]">{detalleCaso.caso?.titulo} - {detalleCaso.caso?.nombre_cliente}</h1>
           <div className="flex gap-3">
             <button onClick={abrirModalEdicion} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold shadow-sm">Editar</button>
-            <button className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm">Acciones</button>
+            {/* BOTÓN DESPLEGABLE DE ACCIONES */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsAccionesOpen(!isAccionesOpen)}
+                className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors"
+              >
+                Acciones <span className="text-xs">▼</span>
+              </button>
+              {/* Menú Desplegable */}
+              {isAccionesOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20 animate-fade-in-up">
+                  <div className="py-2">
+                    
+                    {/* Opción 1: Solicitar Revisión (Acción estándar) */}
+                    <button 
+                      onClick={abrirModalRevision}
+                      className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors"
+                    >
+                      <span className="text-lg">👀</span> Solicitar Revisión
+                    </button>
+
+                    {/* Opción 2: Levantar Observaciones (Cuando el caso fue devuelto) */}
+                    <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
+                      <span className="text-lg">📝</span> Levantar Observaciones
+                    </button>
+
+                    {/* Opción 3: Cancelar Solicitud (Botón de pánico si está pendiente) */}
+                    {/* Nota: Luego puedes envolver esto en un if: {estado_revision === 'Pendiente' && ...} */}
+                    <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors">
+                      <span className="text-lg">🚫</span> Cancelar Solicitud
+                    </button>
+
+                    {/* LÍNEA DIVISORIA */}
+                    <hr className="my-1 border-gray-100" />
+
+                    {/* Opciones del Jefe/Revisor */}
+                    {/* Al hacer clic aquí, abrirías un modal nuevo "ModalEvaluarRevision" donde él decide si Aprueba o rechaza */}
+                    <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+                      <span className="text-lg">⚖️</span> Atender Revisión
+                    </button>
+
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -663,6 +763,93 @@ const getFileIcon = (extension) => {
                 Subir Nueva Versión
               </button>
             </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Solicitar Revisión */}
+      {isRevisionModalOpen && (
+        <Modal title="Solicitar Revisión" onClose={() => setIsRevisionModalOpen(false)}>
+          <form onSubmit={handleSolicitarRevision}>
+            
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
+              <p className="text-sm text-blue-800">
+                Al enviar esta solicitud, el revisor seleccionado recibirá una notificación. Si no seleccionas ningún documento en específico, se entenderá que solicitas una <strong>revisión general</strong> de todo el expediente.
+              </p>
+            </div>
+
+            {/* Selector de Revisor */}
+            <div className="mb-5">
+              <Label text="Seleccionar Revisor *" />
+              <select 
+                required
+                value={revisionData.revisor_id} 
+                onChange={(e) => setRevisionData({...revisionData, revisor_id: e.target.value})} 
+                className="w-full p-2.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">¿Quién revisará este caso?</option>
+                {/* Asumiendo que usas catalogos.usuarios para elegir al jefe o revisor */}
+                {catalogos?.usuarios?.map(user => (
+                  <option key={user.id} value={user.id}>{user.nombre_completo}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Comentarios */}
+            <div className="mb-6">
+              <Label text="Comentarios o instrucciones para el revisor" />
+              <textarea 
+                value={revisionData.comentarios_solicitud} 
+                onChange={(e) => setRevisionData({...revisionData, comentarios_solicitud: e.target.value})} 
+                className="w-full p-3 border rounded text-sm resize-none h-24 focus:ring-2 focus:ring-blue-500 outline-none" 
+                placeholder="Ej. Por favor revisa detenidamente la cláusula 3 de los contratos anexados..."
+              />
+            </div>
+
+            {/* Selección de Documentos (Opcional) */}
+            <div className="mb-6">
+              <Label text="Documentos específicos a revisar (Opcional)" />
+              
+              <div className="border rounded-lg max-h-48 overflow-y-auto bg-gray-50/30 p-2">
+                {(!documentos.documentacion || documentos.documentacion.length === 0) ? (
+                  <p className="text-xs text-gray-500 text-center py-4">No hay documentos en este caso.</p>
+                ) : (
+                  documentos.documentacion.map(doc => (
+                    <label key={doc.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        checked={revisionData.documentos_ids.includes(doc.id)}
+                        onChange={() => handleDocCheckboxChange(doc.id)}
+                      />
+                      <span className="text-xl">{getFileIcon(doc.extension)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-800 truncate">{doc.nombre}</p>
+                        <p className="text-xs text-gray-400">Subido el: {doc.fecha_subida}</p>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
+              <button 
+                type="button" 
+                onClick={() => setIsRevisionModalOpen(false)} 
+                className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 transition"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                className="px-6 py-2 bg-[#080E21] hover:bg-slate-800 text-white font-bold rounded shadow-md transition"
+              >
+                Enviar Solicitud
+              </button>
+            </div>
+
           </form>
         </Modal>
       )}
