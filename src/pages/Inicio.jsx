@@ -1,77 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 
-// Importamos el servicio
+// Importamos los servicios
 import authService from '../services/authService';
 import userService from '../services/userService';
+import calendarioService from '../services/calendarioService';
 
-// 1. Importación de imágenes 
+// Importación de imágenes 
 import iconCasos from '../image/IconCasos.png';
 import iconAudiencias from '../image/IconAdiencias.png';
 import iconDocs from '../image/IconDocPendientes.png';
 import iconRevisar from '../image/IconRevisar.png';
 
-// --- DATOS SIMULADOS DE EVENTOS ---
-// En el futuro, esto vendrá de userService.obtenerEventos()
-const EVENTOS_SIMULADOS = [
-  { fecha: new Date(new Date().setDate(new Date().getDate() + 1)), hora: '09:00', tipo: 'audiencia', titulo: 'Audiencia de Pruebas - Caso 2024-001', descripcion: 'Presentación de testigos clave en el juzgado de familia.' },
-  { fecha: new Date(), hora: '11:30', tipo: 'reunion', titulo: 'Reunión con Cliente PYME S.A.', descripcion: 'Revisión de cláusulas del contrato de fusión.' },
-  { fecha: new Date(), hora: '16:00', tipo: 'plazo', titulo: 'Vencimiento Plazo Memorial', descripcion: 'Enviar memorial de apelación al tribunal administrativo.' },
-  { fecha: new Date(), hora: '16:00', tipo: 'plazo', titulo: 'Vencimiento Plazo Memorial', descripcion: 'Enviar memorial de apelación al tribunal administrativo.' },
-  { fecha: new Date(), hora: '16:00', tipo: 'plazo', titulo: 'Vencimiento Plazo Memorial', descripcion: 'Enviar memorial de apelación al tribunal administrativo.' },
-  { fecha: new Date(), hora: '16:00', tipo: 'plazo', titulo: 'Vencimiento Plazo Memorial', descripcion: 'Enviar memorial de apelación al tribunal administrativo.' },
-  { fecha: new Date(), hora: '11:30', tipo: 'reunion', titulo: 'Reunión con Cliente PYME S.A.', descripcion: 'Revisión de cláusulas del contrato de fusión.' },
-  { fecha: new Date(), hora: '16:00', tipo: 'plazo', titulo: 'Vencimiento Plazo Memorial', descripcion: 'Enviar memorial de apelación al tribunal administrativo.' },
-  { fecha: new Date(new Date().setDate(new Date().getDate() + 6)), hora: '10:00', tipo: 'doc', titulo: 'Lectura de Expediente - Cliente García', descripcion: 'Análisis de la nueva documentación recibida.' },
-  { fecha: new Date(new Date().setDate(new Date().getDate() - 3)), hora: '14:30', tipo: 'audiencia', titulo: 'Audiencia Conciliación (Pasada)', descripcion: 'Audiencia de conciliación en el Centro de Arbitraje.' },
-];
-
-
-
 const Inicio = () => {
   const navigate = useNavigate();
 
-
-  // 9. Estados para manejar la información del usuario
+  // Estados para manejar la información del usuario
   const [datosUsuario, setDatosUsuario] = useState({});
-  const [eventos, setEventos] = useState([]);
+  const [eventos, setEventos] = useState([]); 
   const [cargando, setCargando] = useState(true);
-  const {  casosPendientes } = useOutletContext();
+  const { casosPendientes } = useOutletContext();
 
-
-  // --- ESTADOS DEL CALENDARIO ---
-  const [diaSeleccionado, setDiaSeleccionado] = useState(null); // Día expandido
+  // ESTADOS DEL CALENDARIO
+  const [diaSeleccionado, setDiaSeleccionado] = useState(null);
 
   const autenticado = async () => {
     const esAuth = await authService.isAuthenticated();
-    if (!esAuth) {
-      console.log("Usuario no autenticado, redirigiendo al login...");
-      navigate('/login');
-    }
+    if (!esAuth) navigate('/login');
   };
 
   const cargarDatosDelDashboard = async () => {
     try {
-      // Promise.all ejecuta ambas peticiones al mismo tiempo y espera a que LAS DOS terminen
+      // Ejecutamos las peticiones al backend
       const [respuestaPerfil, respuestaCasos, respuestaEventos] = await Promise.all([
         userService.obtenerPerfil(),
         userService.obtenerCasos(),
-        userService.obtenerEventos()
+        calendarioService.obtenerEventos() // Esta función debe llamar a /api/calendario
       ]);
 
-      // Guardamos todo de golpe en el estado
       setDatosUsuario({
         user: respuestaPerfil.dataUsuario,
         casos: respuestaCasos
       });
 
+      // Guardamos los eventos reales
       setEventos(respuestaEventos);
 
     } catch (error) {
       console.error("Error al cargar los datos del panel:", error);
     } finally {
-      // Solo quitamos la pantalla de carga cuando ya tenemos TANTO el perfil COMO los casos
       setCargando(false);
     }
   };
@@ -88,16 +65,26 @@ const Inicio = () => {
     doc: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-l-4 border-blue-500' },
   };
 
-  // Función auxiliar para filtrar eventos por fecha
-  const obtenerEventosDelDia = (fecha) => {
-    return EVENTOS_SIMULADOS.filter(evento =>
-      evento.fecha.getDate() === fecha.getDate() &&
-      evento.fecha.getMonth() === fecha.getMonth() &&
-      evento.fecha.getFullYear() === fecha.getFullYear()
-    ).sort((a, b) => a.hora.localeCompare(b.hora)); // Ordenamos por hora
+  // --- FUNCIONES AUXILIARES PARA EL CALENDARIO ---
+
+  // Extrae la hora en formato HH:mm de un string ISO
+  const formatearHora = (fechaISO) => {
+    const fecha = new Date(fechaISO);
+    return fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  // 5. Mostrar una pantalla de carga mientras llegan los datos
+  // Filtra los eventos del estado 'eventos' por la fecha proporcionada
+  const obtenerEventosDelDia = (fechaCalendario) => {
+    return eventos.filter(evento => {
+      const fechaEvento = new Date(evento.fecha_hora);
+      return (
+        fechaEvento.getDate() === fechaCalendario.getDate() &&
+        fechaEvento.getMonth() === fechaCalendario.getMonth() &&
+        fechaEvento.getFullYear() === fechaCalendario.getFullYear()
+      );
+    }).sort((a, b) => a.fecha_hora.localeCompare(b.fecha_hora));
+  };
+
   if (cargando) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#080E21]">
@@ -108,126 +95,93 @@ const Inicio = () => {
 
   return (
     <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
+      {/* TARJETAS DE RESUMEN */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-
-        {/* 6. Tarjeta: Casos Activos */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Casos Activos</h3>
-              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos.resumen.casosActivos}</p>
+              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos?.resumen?.casosActivos || 0}</p>
             </div>
-            <img src={iconCasos} alt="Icono Casos" width="70" height="70"/>
+            <img src={iconCasos} alt="Casos" width="70" />
           </div>
         </div>
 
-        {/* 7. Tarjeta: Audiencias / Plazos */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500 hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Audiencias / Plazos</h3>
-              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos.resumen.eventosActivos}</p>
+              <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos?.resumen?.eventosActivos || 0}</p>
             </div>
-            <img src={iconAudiencias} alt="Icono Audiencias" width="70" height="70"/>
+            <img src={iconAudiencias} alt="Eventos" width="70" />
           </div>
         </div>
 
-        {/* 8. Tarjeta: Doc Recibidos */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#9333EA] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#9333EA] hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Doc Recibidos</h3>
-              <p className="text-4xl font-black text-gray-800 mt-2">esperando</p>
+              <p className="text-4xl font-black text-gray-800 mt-2">0</p>
             </div>
-            <div>
-              <img src={iconDocs} alt="Icono Documentos" width="70" height="70"/>
-            </div>
+            <img src={iconDocs} alt="Docs" width="70" />
           </div>
         </div>
 
-                {/* 8. Tarjeta: Revisiones pendientes por el usuario */}
-        <div onClick={() => navigate('/revisiones')}
-        className="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#A52019] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
+        <div onClick={() => navigate('/revisiones')} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#A52019] hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-gray-500 text-sm font-bold uppercase">Casos Pendientes de Revisar </h3>
-              {console.log("Casos Pendientes en el render:", casosPendientes)}
-              <p className="text-4xl font-black text-gray-800 mt-2">{casosPendientes?.casos_pendientes}</p>
+              <h3 className="text-gray-500 text-sm font-bold uppercase">Revisiones Pendientes</h3>
+              <p className="text-4xl font-black text-gray-800 mt-2">{casosPendientes?.casos_pendientes || 0}</p>
             </div>
-            <div>
-              <img src={iconRevisar} alt="Icono Revisar" width="70" height="70" />
-            </div>
+            <img src={iconRevisar} alt="Revisar" width="70" />
           </div>
         </div>
       </div>
 
-      {/* --- SECCIÓN DEL CALENDARIO INTERACTIVO --- */}
+      {/* SECCIÓN DEL CALENDARIO */}
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-[#080E21]">Agenda y Vencimientos</h3>
-        </div>
+        <h3 className="text-xl font-bold text-[#080E21] mb-6">Agenda y Vencimientos</h3>
 
-        {/* El grid principal del calendario y el panel de detalles */}
         <div className={`grid gap-6 ${diaSeleccionado ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
-
-          {/* Contenedor del Calendario Grid (Izquierda) */}
+          {/* Calendario Grid */}
           <div className={`${diaSeleccionado ? 'md:col-span-2' : ''}`}>
-
-            {/* Cabecera de días (Fija Lunes a Domingo) */}
-            <div className="grid grid-cols-7 gap-px mb-px bg-gray-100 rounded-t-lg border-t border-x border-gray-100">
-              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(dia => (
-                <div key={dia} className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">
-                  {dia}
-                </div>
+            <div className="grid grid-cols-7 gap-px mb-px bg-gray-100 rounded-t-lg border-t border-x">
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(dia => (
+                <div key={dia} className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">{dia}</div>
               ))}
             </div>
 
-            {/* Cuadrícula del Calendario (Estilo image_3.png con bordes finos) */}
             <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-b-lg overflow-hidden">
               {Array.from({ length: 28 }).map((_, index) => {
-                // Lógica de ventana deslizante de 28 días, Hoy índice 9
                 const fecha = new Date();
                 fecha.setDate(fecha.getDate() - 9 + index);
                 const esHoy = index === 9;
-                const esMesActual = fecha.getMonth() === new Date().getMonth();
-
                 const eventosDia = obtenerEventosDelDia(fecha);
 
                 return (
                   <div
                     key={index}
-                    className={`bg-white p-2 min-h-[200px] relative transition-all duration-300 cursor-pointer group ${esHoy ? 'bg-blue-50' : ''
-                      } hover:bg-gray-50 ${diaSeleccionado && diaSeleccionado.fecha.getTime() === fecha.getTime() ? 'ring-2 ring-blue-500 ring-inset shadow-xl' : ''
-                      }`}
+                    className={`bg-white p-2 min-h-[180px] transition-all cursor-pointer hover:bg-gray-50 ${esHoy ? 'bg-blue-50' : ''} ${diaSeleccionado?.fecha.getTime() === fecha.getTime() ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
                     onClick={() => setDiaSeleccionado({ fecha, eventos: eventosDia })}
                   >
-                    {/* Número del día */}
-                    <div className="flex justify-start items-start mb-2">
+                    <div className="flex mb-2">
                       {esHoy ? (
-                        <div className="h-8 w-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                        <div className="h-7 w-7 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-sm shadow-md">
                           {fecha.getDate()}
                         </div>
                       ) : (
-                        <span className={`text-lg font-bold ${esMesActual ? 'text-gray-800' : 'text-gray-400'}`}>
+                        <span className={`text-sm font-bold ${fecha.getMonth() === new Date().getMonth() ? 'text-gray-800' : 'text-gray-400'}`}>
                           {fecha.getDate()}
                         </span>
                       )}
                     </div>
 
-                    {/* Lista de eventos del día */}
-                    <div className="space-y-1.5 overflow-y-auto max-h-[140px] pr-1">
-                      {eventosDia.map((evento, evtIdx) => {
-                        const estilos = MAPPING_COLORES_EVENTO[evento.tipo];
-                        return (
-                          <div
-                            key={evtIdx}
-                            className={`${estilos.bg} ${estilos.text} ${estilos.border} p-1.5 rounded text-xs flex items-center gap-1.5 shadow-sm transition group-hover:shadow-md`}
-                          >
-                            <span className="font-semibold">{evento.hora}</span>
-                            <span className="truncate">{evento.titulo}</span>
-                          </div>
-                        );
-                      })}
+                    <div className="space-y-1 overflow-y-auto max-h-[120px]">
+                      {eventosDia.map((ev, i) => (
+                        <div key={i} className={`${MAPPING_COLORES_EVENTO[ev.tipo_evento]?.bg} ${MAPPING_COLORES_EVENTO[ev.tipo_evento]?.text} ${MAPPING_COLORES_EVENTO[ev.tipo_evento]?.border} p-1 rounded text-[10px] truncate shadow-sm`}>
+                          <span className="font-bold">{formatearHora(ev.fecha_hora)}</span> {ev.titulo}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -235,64 +189,41 @@ const Inicio = () => {
             </div>
           </div>
 
-          {/* Contenedor del Panel Detallado (Derecha - Condicional) */}
+          {/* Panel Detallado */}
           {diaSeleccionado && (
-            <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 shadow-inner flex flex-col h-full animate-fade-in-right">
+            <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 flex flex-col h-full animate-fade-in-right">
               <div className="flex justify-between items-center mb-6 border-b pb-4">
                 <div className="text-right">
-                  <h4 className="text-2xl font-black text-[#080E21]">
-                    {diaSeleccionado.fecha.toLocaleDateString('es-ES', { weekday: 'long' })}
-                  </h4>
-                  <p className="text-gray-600 font-medium">
-                    {diaSeleccionado.fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-                  </p>
+                  <h4 className="text-xl font-black text-[#080E21] capitalize">{diaSeleccionado.fecha.toLocaleDateString('es-ES', { weekday: 'long' })}</h4>
+                  <p className="text-gray-600">{diaSeleccionado.fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</p>
                 </div>
-                <button
-                  onClick={() => setDiaSeleccionado(null)}
-                  className="text-gray-400 hover:text-gray-700 bg-white h-10 w-10 rounded-full flex items-center justify-center transition shadow hover:shadow-md"
-                >
-                  <span className="text-2xl font-light">×</span>
-                </button>
+                <button onClick={() => setDiaSeleccionado(null)} className="text-gray-400 hover:text-gray-700 bg-white h-8 w-8 rounded-full shadow flex items-center justify-center">×</button>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+              <div className="flex-1 overflow-y-auto space-y-4">
                 {diaSeleccionado.eventos.length > 0 ? (
-                  <div className="space-y-5">
-                    <h5 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Eventos del día</h5>
-                    {diaSeleccionado.eventos.map((evento, index) => {
-                      const estilos = MAPPING_COLORES_EVENTO[evento.tipo];
-                      return (
-                        <div key={index} className={`bg-white p-5 rounded-lg shadow border-l-4 ${estilos.border.split(' ')[2]} flex flex-col`}>
-                          <div className="flex justify-between items-center mb-3">
-                            <span className={`${estilos.bg} ${estilos.text} text-xs font-bold px-3 py-1 rounded-full uppercase`}>
-                              {evento.tipo}
-                              22:34:44</span>
-                            <span className="text-lg font-bold text-gray-800">{evento.hora}</span>
-                          </div>
-                          <h6 className="text-base font-semibold text-gray-800 mb-2">{evento.titulo}</h6>
-                          <p className="text-sm text-gray-600 font-light">{evento.descripcion}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  diaSeleccionado.eventos.map((ev, i) => (
+                    <div key={i} className={`bg-white p-4 rounded-lg shadow border-l-4 ${MAPPING_COLORES_EVENTO[ev.tipo_evento]?.border.split(' ')[2]}`}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className={`${MAPPING_COLORES_EVENTO[ev.tipo_evento]?.bg} ${MAPPING_COLORES_EVENTO[ev.tipo_evento]?.text} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase`}>
+                          {ev.tipo_evento}
+                        </span>
+                        <span className="text-sm font-bold text-gray-800">{formatearHora(ev.fecha_hora)}</span>
+                      </div>
+                      <h6 className="text-sm font-semibold text-gray-900 mb-1">{ev.titulo}</h6>
+                      <p className="text-xs text-gray-600 line-clamp-3">{ev.descripcion}</p>
+                      <p className="text-[10px] text-blue-600 mt-2 font-mono uppercase">{ev.expediente_id}</p>
+                    </div>
+                  ))
                 ) : (
-                  <div className="flex flex-col h-full items-center justify-center text-center py-12 bg-white rounded-lg border border-gray-100">
-                    <span className="text-6xl mb-4">😌</span>
-                    <h5 className="text-lg font-bold text-gray-800">Día tranquilo</h5>
-                    <p className="text-sm text-gray-500 max-w-xs mt-1">No hay audiencias, plazos ni reuniones programadas para este día.</p>
+                  <div className="text-center py-12 bg-white rounded-lg border border-gray-100">
+                    <span className="text-4xl block mb-2">😌</span>
+                    <p className="text-sm text-gray-500 font-medium">Día sin compromisos</p>
                   </div>
                 )}
               </div>
             </div>
           )}
-        </div>
-
-        {/* Leyenda del calendario */}
-        <div className="mt-8 flex space-x-5 text-xs text-gray-500 justify-center border-t pt-6">
-          <div className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></div> Audiencia</div>
-          <div className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500 mr-1.5"></div> Plazo Vence</div>
-          <div className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-green-500 mr-1.5"></div> Reunión</div>
-          <div className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5"></div> Lectura/Doc</div>
         </div>
       </div>
     </main>

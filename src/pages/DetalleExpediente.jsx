@@ -30,7 +30,7 @@ const DetalleExpediente = () => {
   const [isEquipoModalOpen, setIsEquipoModalOpen] = useState(false);
   const [cargando, setCargando] = useState(true);
 
-// --- ESTADOS PARA ACCIONES Y REVISIONES ---
+  // --- ESTADOS PARA ACCIONES Y REVISIONES ---
   const [isAccionesOpen, setIsAccionesOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [revisionData, setRevisionData] = useState({
@@ -57,6 +57,13 @@ const DetalleExpediente = () => {
 
   const fileVersionInputRef = useRef(null); // Nueva referencia para el Drag&Drop de versión
 
+  // --- ESTADOS PARA ATENDER REVISIÓN (JEFE) ---
+  const [isEvaluarModalOpen, setIsEvaluarModalOpen] = useState(false);
+  const [evaluacionData, setEvaluacionData] = useState({
+    estado_revision_id: '', // 2 = Aprobado, 3 = Con Observaciones
+    comentarios_revisor: ''
+  });
+
   // --- 4. CARGA INICIAL DE DATOS (Optimizado) ---
   const inicializarPagina = useCallback(async () => {
     const esAuth = await authService.isAuthenticated();
@@ -70,7 +77,7 @@ const DetalleExpediente = () => {
         casosService.obtenerIdForm(id),
         casosService.obtenerEquipoCaso(id),
         docsService.obtenerDocumentosCaso(id),
-        casosService.obtenerHistorialCaso(id)
+        casosService.obtenerHistorialCaso(id),
       ]);
 
       setDetalleCaso(resDetalle);
@@ -105,7 +112,7 @@ const DetalleExpediente = () => {
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-const handleGuardarEdicion = async (e) => {
+  const handleGuardarEdicion = async (e) => {
     e.preventDefault();
     try {
 
@@ -117,6 +124,19 @@ const handleGuardarEdicion = async (e) => {
       alert("Error al actualizar el caso: " + (error.response?.data?.error || error.message));
     }
   };
+
+  // --- 5.1 LOGICA PARA DATOS GENRALES DEL CASO (BADGES, FECHAS, ETC) ---
+
+  // --- FILTRADO DE REVISIONES PARA EL CUADRO LATERAL ---
+  // Buscamos eventos de tipo revisión en todo el historial
+  const revisionesRecientes = historialCaso.historial
+    .flatMap(grupo => grupo.eventos) // Unificamos todos los eventos en un solo array
+    .filter(evento =>
+      evento.tipo === 'solicitud_revision' ||
+      evento.tipo === 'revision_completada' ||
+      evento.tipo === 'levantar_observaciones' // Añade aquí los tipos que uses en el back
+    )
+    .slice(0, 4); // Mostramos solo las 4 más recientes para que el cuadro no sea gigante
 
   // --- 6. LÓGICA DE DOCUMENTOS ---
   const handleFileChange = (e) => {
@@ -191,7 +211,7 @@ const handleGuardarEdicion = async (e) => {
       setArchivoVersion(null);
 
       alert("Nueva versión subida correctamente.");
-      
+
       // Recargamos los documentos para ver el archivo actualizado en la tabla
       const resDocs = await docsService.obtenerDocumentosCaso(id);
       setDocumentos(resDocs);
@@ -232,6 +252,13 @@ const handleGuardarEdicion = async (e) => {
     setIsRevisionModalOpen(true);
     setIsAccionesOpen(false); // Cerramos el menú desplegable
   };
+  // Abrir modal de evaluación
+  const abrirModalEvaluar = () => {
+    setEvaluacionData({ estado_revision_id: '', comentarios_revisor: '' });
+    setIsEvaluarModalOpen(true);
+    setIsAccionesOpen(false); // Cierra el dropdown
+  };
+
 
   // Manejador para los checkboxes de documentos
   const handleDocCheckboxChange = (docId) => {
@@ -256,12 +283,12 @@ const handleGuardarEdicion = async (e) => {
       // AQUÍ HACES EL POST A TU BACKEND
       console.log("Datos a enviar para solicitud de revisión:", id, revisionData);
       await casosService.solicitarRevision(id, revisionData.revisor_id, revisionData.comentarios_solicitud, revisionData.documentos_ids);
-      
+
       console.log("Enviando al backend:", revisionData);
       alert("Solicitud de revisión enviada exitosamente.");
-      
+
       setIsRevisionModalOpen(false);
-      
+      inicializarPagina(); // Recargamos todo para actualizar el estado visual del caso
       // Opcional: Recargar el historial para que aparezca el evento de solicitud
       // const resHistorial = await casosService.obtenerHistorialCaso(id);
       // setHistorialCaso(resHistorial);
@@ -272,52 +299,82 @@ const handleGuardarEdicion = async (e) => {
     }
   };
 
-// Función para obtener el emoji según la extensión del archivo
-const getFileIcon = (extension) => {
-  // Limpiamos la extensión: la pasamos a minúsculas y le quitamos el punto si lo tiene
-  const ext = extension?.toLowerCase().replace('.', '') || '';
 
-  const iconos = {
-    // Documentos PDF
-    pdf: '📕',
-    
-    // Microsoft Word
-    doc: '📘', 
-    docx: '📘',
-    
-    // Microsoft Excel / Datos
-    xls: '📗', 
-    xlsx: '📗', 
-    csv: '📗',
-    
-    // Microsoft PowerPoint
-    ppt: '📙', 
-    pptx: '📙',
-    
-    // Texto plano
-    txt: '📝', 
-    rtf: '📝',
-    
-    // Imágenes
-    jpg: '🖼️', 
-    jpeg: '🖼️', 
-    png: '🖼️', 
-    gif: '🖼️', 
-    svg: '🖼️',
-    
-    // Comprimidos
-    zip: '🗂️', 
-    rar: '🗂️', 
-    '7z': '🗂️',
-    
-    // Multimedia (Opcional)
-    mp4: '🎞️', 
-    mp3: '🎵'
+  // Enviar evaluación al backend
+  const handleEvaluarSubmit = async (e) => {
+    e.preventDefault();
+    if (!evaluacionData.estado_revision_id) return alert("Por favor, selecciona una decisión.");
+
+    try {
+      // IMPORTANTE: Necesitas el ID de la revisión activa.
+      // Asumo que tu backend manda esto en el detalle del caso, ej: detalleCaso.caso.revision_actual_id
+      // Si se llama diferente, ajusta esta variable:
+      
+      const idRevision = await casosService.obtenerRevisionActiva(id); // Implementa esta función para obtener el ID de la revisión activa del caso
+      console.log("ID de revisión activa:", idRevision);
+      if (!idRevision.id_activo) {
+        return alert("Error: No se encontró el ID de la revisión en curso.");
+      }
+
+      await casosService.aprobarObservarCaso(idRevision.id_activo, evaluacionData);
+
+      alert("La revisión ha sido completada y notificada al equipo.");
+      setIsEvaluarModalOpen(false);
+      navigate('/revisiones'); // Redirige a la bandeja de revisiones para ver el cambio reflejado
+
+
+    } catch (error) {
+      console.error("Error al enviar la evaluación:", error);
+      alert("Hubo un error al procesar tu respuesta.");
+    }
   };
 
-  // Retorna el icono encontrado, o un icono por defecto ('📄') si la extensión no está en la lista
-  return iconos[ext] || '📄';
-};
+  // Función para obtener el emoji según la extensión del archivo
+  const getFileIcon = (extension) => {
+    // Limpiamos la extensión: la pasamos a minúsculas y le quitamos el punto si lo tiene
+    const ext = extension?.toLowerCase().replace('.', '') || '';
+
+    const iconos = {
+      // Documentos PDF
+      pdf: '📕',
+
+      // Microsoft Word
+      doc: '📘',
+      docx: '📘',
+
+      // Microsoft Excel / Datos
+      xls: '📗',
+      xlsx: '📗',
+      csv: '📗',
+
+      // Microsoft PowerPoint
+      ppt: '📙',
+      pptx: '📙',
+
+      // Texto plano
+      txt: '📝',
+      rtf: '📝',
+
+      // Imágenes
+      jpg: '🖼️',
+      jpeg: '🖼️',
+      png: '🖼️',
+      gif: '🖼️',
+      svg: '🖼️',
+
+      // Comprimidos
+      zip: '🗂️',
+      rar: '🗂️',
+      '7z': '🗂️',
+
+      // Multimedia (Opcional)
+      mp4: '🎞️',
+      mp3: '🎵'
+    };
+
+    // Retorna el icono encontrado, o un icono por defecto ('📄') si la extensión no está en la lista
+    return iconos[ext] || '📄';
+  };
 
   // --- ESTILOS DINÁMICOS ---
   const tabStyle = (tab) =>
@@ -347,7 +404,7 @@ const getFileIcon = (extension) => {
             <button onClick={abrirModalEdicion} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold shadow-sm">Editar</button>
             {/* BOTÓN DESPLEGABLE DE ACCIONES */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setIsAccionesOpen(!isAccionesOpen)}
                 className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors"
               >
@@ -357,34 +414,66 @@ const getFileIcon = (extension) => {
               {isAccionesOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20 animate-fade-in-up">
                   <div className="py-2">
-                    
-                    {/* Opción 1: Solicitar Revisión (Acción estándar) */}
-                    <button 
-                      onClick={abrirModalRevision}
-                      className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors"
-                    >
-                      <span className="text-lg">👀</span> Solicitar Revisión
-                    </button>
 
-                    {/* Opción 2: Levantar Observaciones (Cuando el caso fue devuelto) */}
-                    <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
-                      <span className="text-lg">📝</span> Levantar Observaciones
-                    </button>
+                    {/* Variable auxiliar para limpiar el código (Si es null, asumimos "En elaboración" = 6) */}
+                    {(() => {
+                      const estadoRev = detalleCaso.caso?.estado_revision || "En elaboración";
+                      return (
+                        <>
+                          {/* ESCENARIO 1: EN ELABORACIÓN (6) */}
+                          {estadoRev === "En elaboración" && (
+                            <button
+                              onClick={abrirModalRevision}
+                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors"
+                            >
+                              <span className="text-lg">👀</span> Solicitar Revisión
+                            </button>
+                          )}
 
-                    {/* Opción 3: Cancelar Solicitud (Botón de pánico si está pendiente) */}
-                    {/* Nota: Luego puedes envolver esto en un if: {estado_revision === 'Pendiente' && ...} */}
-                    <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors">
-                      <span className="text-lg">🚫</span> Cancelar Solicitud
-                    </button>
+                          {/* ESCENARIO 2: PENDIENTE (1) para dueño el caso */}
+                          {(estadoRev === "Pendiente" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
+                            <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors">
+                              <span className="text-lg">🚫</span> Cancelar Solicitud
+                            </button>
+                          )}
 
-                    {/* LÍNEA DIVISORIA */}
-                    <hr className="my-1 border-gray-100" />
+                          {/* ESCENARIO 3: CON OBSERVACIONES (3) */}
+                          {(estadoRev === "Con Observaciones") && (
+                            <button
+                              onClick={abrirModalRevision}
+                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 transition-colors">
+                              <span className="text-lg">📝</span> Levantar Observaciones
+                            </button>
+                          )}
 
-                    {/* Opciones del Jefe/Revisor */}
-                    {/* Al hacer clic aquí, abrirías un modal nuevo "ModalEvaluarRevision" donde él decide si Aprueba o rechaza */}
-                    <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
-                      <span className="text-lg">⚖️</span> Atender Revisión
-                    </button>
+                          {/* ESCENARIO 4: EN REVISIÓN (4) para el que envio la solicitud */}
+                          {(estadoRev === "En Revisión" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
+                            <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+                              <span className="text-lg">🚫</span> El caso ya se encuentra en Revision
+                            </button>
+                          )}
+
+                          {/* ESCENARIO 4: EN REVISIÓN (4) */}
+                          {/* Nota: En la vida real, aquí pondrías una validación extra para que ESTE botón solo lo vea el JEFE asignado, ej: && datosUsuario.id === detalleCaso.caso.revisor_id */}
+                          {(estadoRev === "En Revisión" && revisionesRecientes[0].autor_id !== datosUsuario.id) && (
+                            <button
+                              onClick={abrirModalEvaluar}
+                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors"
+                            >
+                              <span className="text-lg">⚖️</span> Atender Revisión
+                            </button>
+                          )}
+
+                          {/* ESCENARIO 5: APROBADO (2) O REVISADO (5) */}
+                          {(estadoRev === "Aprobado" || estadoRev === "Revisado") && (
+                            <div className="px-4 py-2.5 text-sm font-semibold text-green-600 flex items-center gap-3 bg-green-50/50">
+                              <span className="text-lg">✅</span> Revisión Completada
+                            </div>
+                          )}
+
+                        </>
+                      );
+                    })()}
 
                   </div>
                 </div>
@@ -412,7 +501,7 @@ const getFileIcon = (extension) => {
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
             <h3 className="text-lg font-bold text-[#080E21] mb-4">Descripción del Caso</h3>
             <p className="text-gray-600 text-sm mb-8 leading-relaxed">{detalleCaso.caso?.descripcion}</p>
-            <hr className="mb-6" />
+            <hr className="mb-6 border-gray-100" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <InfoBox label="Cliente" value={detalleCaso.caso?.nombre_cliente} />
               <InfoBox label="Contraparte" value={detalleCaso.caso?.contraparte || 'No especificada'} />
@@ -420,15 +509,60 @@ const getFileIcon = (extension) => {
               <InfoBox label="Vencimiento" value="Próximamente" color="text-red-500" />
             </div>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm h-fit">
-            <h3 className="text-lg font-bold mb-6">Estado Actual</h3>
-            <div className="bg-gray-50 p-4 rounded-lg flex items-center gap-3">
-              <span className="text-xl">🕒</span>
-              <div>
-                <p className="font-bold text-sm">{detalleCaso.caso?.estado}</p>
-                <p className="text-xs text-gray-500">Última actualización: Hoy</p>
-              </div>
+
+          {/* NUEVO CUADRO: MONITOR DE REVISIONES */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm h-fit">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-[#080E21]">Revisiones</h3>
+              <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${detalleCaso.caso?.estado_revision === 'Aprobado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                }`}>
+                {detalleCaso.caso?.estado_revision}
+              </span>
             </div>
+
+            <div className="space-y-6 relative">
+              {/* Línea vertical decorativa */}
+              <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-100"></div>
+
+              {revisionesRecientes.length > 0 ? (
+                revisionesRecientes.map((rev, idx) => (
+                  <div key={rev.id || idx} className="relative pl-8">
+                    {/* Punto indicador */}
+                    <div className={`absolute left-0 top-1 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${rev.tipo === 'revision_completada' ? 'bg-green-500' : 'bg-orange-500'
+                      }`}>
+                      <span className="text-[10px] text-white">
+                        {rev.tipo === 'revision_completada' ? '✓' : '👁'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="text-xs font-bold text-gray-800">{rev.titulo}</p>
+                      <span className="text-[10px] text-gray-400 font-medium">{rev.hora}</span>
+                    </div>
+
+                    <p className="text-xs text-gray-500 leading-relaxed italic bg-gray-50 p-2 rounded border border-gray-100">
+                      "{rev.descripcion}"
+                    </p>
+
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <img src={rev.avatar || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"} className="w-4 h-4 rounded-full" alt="avatar" />
+                      <span className="text-[10px] text-gray-400 font-semibold">{rev.autor}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-gray-400">No hay revisiones registradas aún.</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setPestañaActiva('historial')}
+              className="w-full mt-6 py-2 text-xs font-bold text-gray-400 hover:text-[#080E21] transition-colors border-t border-gray-100 pt-4"
+            >
+              Ver historial completo →
+            </button>
           </div>
 
         </div>
@@ -458,7 +592,7 @@ const getFileIcon = (extension) => {
                 <tbody className="divide-y">
                   {documentos.documentacion.map((doc) => (
                     <tr key={doc.id} className="hover:bg-blue-50/30 group transition-colors">
-                      <td className="p-4 flex items-center gap-3">                        
+                      <td className="p-4 flex items-center gap-3">
                         <span className="text-xl">{getFileIcon(doc.extension)}</span>
                         <div>
                           <p className="text-sm font-bold">{doc.nombre}</p>
@@ -522,17 +656,17 @@ const getFileIcon = (extension) => {
           {(!historialCaso.historial || historialCaso.historial.length === 0) ? (
             <EmptyState icon="⏳" title="Sin historial" description="Aún no se han registrado eventos en este expediente." />
           ) : (
-            
+
             /* CONTENEDOR PRINCIPAL DEL TIMELINE */
             <div className="relative pt-4 pb-12">
-              
+
               {/* 1. LÍNEA VERTICAL CENTRAL CONTINUA */}
               <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 -translate-x-1/2 z-0"></div>
 
               {/* 2. ITERAMOS SOBRE LOS GRUPOS DE FECHAS */}
               {historialCaso.historial.map((grupoFecha, grupoIndex) => (
                 <div key={grupoIndex} className="mb-12">
-                  
+
                   {/* Etiqueta de la Fecha Centrada */}
                   <div className="flex justify-center mb-8 relative z-10">
                     <span className="bg-[#080E21] text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-md">
@@ -552,30 +686,30 @@ const getFileIcon = (extension) => {
                         // Documentos
                         'Carga de Documento': { bg: 'bg-blue-100', text: 'text-blue-600', emoji: '📁' },
                         'carga_doc': { bg: 'bg-blue-100', text: 'text-blue-600', emoji: '📁' },
-                        
+
                         'Modificación de Documento': { bg: 'bg-yellow-100', text: 'text-yellow-600', emoji: '✏️' },
                         'modificacion_doc': { bg: 'bg-yellow-100', text: 'text-yellow-600', emoji: '✏️' },
-                        
+
                         'Eliminación de Documento': { bg: 'bg-red-100', text: 'text-red-500', emoji: '🗑️' },
                         'eliminacion_doc': { bg: 'bg-red-100', text: 'text-red-500', emoji: '🗑️' },
-                        
+
                         // Revisiones
                         'Solicitud de Revisión': { bg: 'bg-orange-100', text: 'text-orange-600', emoji: '👀' },
                         'solicitud_revision': { bg: 'bg-orange-100', text: 'text-orange-600', emoji: '👀' },
-                        
+
                         'Revisión Completada': { bg: 'bg-green-100', text: 'text-green-600', emoji: '✅' },
                         'revision_completada': { bg: 'bg-green-100', text: 'text-green-600', emoji: '✅' },
-                        
+
                         // Gestión del Caso
                         'Apertura de Expediente': { bg: 'bg-purple-100', text: 'text-purple-600', emoji: '🏛️' },
                         'creacion': { bg: 'bg-purple-100', text: 'text-purple-600', emoji: '🏛️' },
-                        
+
                         'Generación de Carátula': { bg: 'bg-slate-100', text: 'text-slate-600', emoji: '📄' },
                         'caratula': { bg: 'bg-slate-100', text: 'text-slate-600', emoji: '📄' },
-                        
+
                         'Cambio de Estado del Caso': { bg: 'bg-indigo-100', text: 'text-indigo-600', emoji: '🔄' },
                         'cambio_estado': { bg: 'bg-indigo-100', text: 'text-indigo-600', emoji: '🔄' },
-                        
+
                         'Modificación de Equipo Legal': { bg: 'bg-teal-100', text: 'text-teal-600', emoji: '👥' },
                         'modificacion_equipo': { bg: 'bg-teal-100', text: 'text-teal-600', emoji: '👥' }
                       };
@@ -591,7 +725,7 @@ const getFileIcon = (extension) => {
 
                       return (
                         <div key={evento.id} className="relative flex items-center justify-center w-full">
-                          
+
                           {/* Icono del Evento (Centro) */}
                           <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm border-2 border-white ${iconBg} ${iconText}`}>
                             <span className="text-lg">{iconEmoji}</span>
@@ -600,19 +734,19 @@ const getFileIcon = (extension) => {
                           {/* Tarjeta del Evento */}
                           <div className={`w-full flex ${esIzquierda ? 'justify-start' : 'justify-end'}`}>
                             <div className={`w-[calc(50%-2.5rem)] ${esIzquierda ? 'pr-2' : 'pl-2'}`}>
-                              
+
                               <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm transition hover:shadow-md hover:border-gray-300 relative group">
-                                
+
                                 {/* Hora (Esquina superior) */}
                                 <p className="absolute top-5 right-5 text-xs text-gray-400 font-bold">
                                   {evento.hora}
                                 </p>
-                                
+
                                 {/* Título */}
                                 <h4 className="text-sm font-bold text-[#080E21] mb-1.5 pr-16">
                                   {evento.titulo}
                                 </h4>
-                                
+
                                 {/* Descripción (Manejo de comillas de tu JSON) */}
                                 <p className="text-sm text-gray-600 mb-4 leading-relaxed">
                                   {evento.descripcion}
@@ -621,9 +755,9 @@ const getFileIcon = (extension) => {
                                 {/* Footer de la tarjeta: Autor */}
                                 <div className="flex items-center gap-2 pt-3 border-t border-gray-50">
                                   <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                                    <img 
-                                      src={evento.avatar || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"} 
-                                      alt="avatar" 
+                                    <img
+                                      src={evento.avatar || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"}
+                                      alt="avatar"
                                       className="w-full h-full object-cover"
                                     />
                                   </div>
@@ -724,20 +858,20 @@ const getFileIcon = (extension) => {
       {isModificarModalOpen && (
         <Modal title="Actualizar Versión de Documento" onClose={() => setIsModificarModalOpen(false)}>
           <form onSubmit={handleVersionSubmit}>
-            
+
             <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
               <p className="text-xs text-blue-800 font-semibold mb-1">Reemplazando archivo actual:</p>
               <p className="text-sm font-bold text-blue-900">{docAModificar?.nombre}</p>
             </div>
 
             {/* ZONA DE DRAG & DROP PARA LA VERSIÓN */}
-            <div 
-              onDragOver={(e) => e.preventDefault()} 
+            <div
+              onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
                 if (e.dataTransfer.files?.[0]) setArchivoVersion(e.dataTransfer.files[0]);
-              }} 
-              onClick={() => fileVersionInputRef.current.click()} 
+              }}
+              onClick={() => fileVersionInputRef.current.click()}
               className={`border-2 border-dashed p-10 text-center rounded-xl cursor-pointer transition-colors mb-4 ${archivoVersion ? 'border-yellow-500 bg-yellow-50' : 'hover:bg-gray-50 border-gray-300'}`}
             >
               <input type="file" ref={fileVersionInputRef} onChange={handleFileVersionChange} className="hidden" />
@@ -749,10 +883,10 @@ const getFileIcon = (extension) => {
             {/* Comentarios del Cambio */}
             <div className="mb-4">
               <Label text="Comentarios sobre esta modificación (Opcional)" />
-              <textarea 
-                value={comentariosVersion} 
-                onChange={(e) => setComentariosVersion(e.target.value)} 
-                className="w-full p-2 border rounded text-sm resize-none h-20" 
+              <textarea
+                value={comentariosVersion}
+                onChange={(e) => setComentariosVersion(e.target.value)}
+                className="w-full p-2 border rounded text-sm resize-none h-20"
                 placeholder="Ej: Se corrigió la cláusula 4 a petición del cliente..."
               />
             </div>
@@ -771,7 +905,7 @@ const getFileIcon = (extension) => {
       {isRevisionModalOpen && (
         <Modal title="Solicitar Revisión" onClose={() => setIsRevisionModalOpen(false)}>
           <form onSubmit={handleSolicitarRevision}>
-            
+
             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
               <p className="text-sm text-blue-800">
                 Al enviar esta solicitud, el revisor seleccionado recibirá una notificación. Si no seleccionas ningún documento en específico, se entenderá que solicitas una <strong>revisión general</strong> de todo el expediente.
@@ -781,10 +915,10 @@ const getFileIcon = (extension) => {
             {/* Selector de Revisor */}
             <div className="mb-5">
               <Label text="Seleccionar Revisor *" />
-              <select 
+              <select
                 required
-                value={revisionData.revisor_id} 
-                onChange={(e) => setRevisionData({...revisionData, revisor_id: e.target.value})} 
+                value={revisionData.revisor_id}
+                onChange={(e) => setRevisionData({ ...revisionData, revisor_id: e.target.value })}
                 className="w-full p-2.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">¿Quién revisará este caso?</option>
@@ -798,10 +932,10 @@ const getFileIcon = (extension) => {
             {/* Comentarios */}
             <div className="mb-6">
               <Label text="Comentarios o instrucciones para el revisor" />
-              <textarea 
-                value={revisionData.comentarios_solicitud} 
-                onChange={(e) => setRevisionData({...revisionData, comentarios_solicitud: e.target.value})} 
-                className="w-full p-3 border rounded text-sm resize-none h-24 focus:ring-2 focus:ring-blue-500 outline-none" 
+              <textarea
+                value={revisionData.comentarios_solicitud}
+                onChange={(e) => setRevisionData({ ...revisionData, comentarios_solicitud: e.target.value })}
+                className="w-full p-3 border rounded text-sm resize-none h-24 focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="Ej. Por favor revisa detenidamente la cláusula 3 de los contratos anexados..."
               />
             </div>
@@ -809,15 +943,15 @@ const getFileIcon = (extension) => {
             {/* Selección de Documentos (Opcional) */}
             <div className="mb-6">
               <Label text="Documentos específicos a revisar (Opcional)" />
-              
+
               <div className="border rounded-lg max-h-48 overflow-y-auto bg-gray-50/30 p-2">
                 {(!documentos.documentacion || documentos.documentacion.length === 0) ? (
                   <p className="text-xs text-gray-500 text-center py-4">No hay documentos en este caso.</p>
                 ) : (
                   documentos.documentacion.map(doc => (
                     <label key={doc.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                         checked={revisionData.documentos_ids.includes(doc.id)}
                         onChange={() => handleDocCheckboxChange(doc.id)}
@@ -835,18 +969,110 @@ const getFileIcon = (extension) => {
 
             {/* Botones de acción */}
             <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-              <button 
-                type="button" 
-                onClick={() => setIsRevisionModalOpen(false)} 
+              <button
+                type="button"
+                onClick={() => setIsRevisionModalOpen(false)}
                 className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 transition"
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="px-6 py-2 bg-[#080E21] hover:bg-slate-800 text-white font-bold rounded shadow-md transition"
               >
                 Enviar Solicitud
+              </button>
+            </div>
+
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Atender Revisión (Jefe/Revisor) */}
+      {isEvaluarModalOpen && (
+        <Modal title="Atender Revisión de Expediente" onClose={() => setIsEvaluarModalOpen(false)}>
+          <form onSubmit={handleEvaluarSubmit}>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Selecciona el resultado de tu revisión. Esta acción cambiará el estado del caso y notificará al abogado responsable.
+            </p>
+
+            {/* Tarjetas de Decisión (Radio Cards) */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+
+              {/* Opción: APROBADO (Estado 2) */}
+              <label className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${evaluacionData.estado_revision_id === 2
+                  ? 'border-green-500 bg-green-50 shadow-md'
+                  : 'border-gray-200 hover:border-green-200 hover:bg-gray-50'
+                }`}>
+                <input
+                  type="radio"
+                  name="decision"
+                  className="hidden"
+                  onChange={() => setEvaluacionData({ ...evaluacionData, estado_revision_id: 2 })}
+                />
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${evaluacionData.estado_revision_id === 2 ? 'border-green-500' : 'border-gray-300'}`}>
+                    {evaluacionData.estado_revision_id === 2 && <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>}
+                  </div>
+                  <span className="text-green-700 font-bold">Aprobar Caso</span>
+                </div>
+                <p className="text-xs text-gray-500 ml-8">Todo está correcto. El caso puede continuar su curso normal.</p>
+              </label>
+
+              {/* Opción: CON OBSERVACIONES (Estado 3) */}
+              <label className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${evaluacionData.estado_revision_id === 3
+                  ? 'border-orange-500 bg-orange-50 shadow-md'
+                  : 'border-gray-200 hover:border-orange-200 hover:bg-gray-50'
+                }`}>
+                <input
+                  type="radio"
+                  name="decision"
+                  className="hidden"
+                  onChange={() => setEvaluacionData({ ...evaluacionData, estado_revision_id: 3 })}
+                />
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${evaluacionData.estado_revision_id === 3 ? 'border-orange-500' : 'border-gray-300'}`}>
+                    {evaluacionData.estado_revision_id === 3 && <div className="w-2.5 h-2.5 bg-orange-500 rounded-full"></div>}
+                  </div>
+                  <span className="text-orange-700 font-bold">Devolver (Observar)</span>
+                </div>
+                <p className="text-xs text-gray-500 ml-8">Existen errores o documentos faltantes que deben corregirse.</p>
+              </label>
+
+            </div>
+
+            {/* Comentarios del Revisor */}
+            <div className="mb-6">
+              <Label text={`Comentarios y Feedback ${evaluacionData.estado_revision_id === 3 ? '(Obligatorio)' : '(Opcional)'}`} />
+              <textarea
+                required={evaluacionData.estado_revision_id === 3} // Obligatorio si rechaza
+                value={evaluacionData.comentarios_revisor}
+                onChange={(e) => setEvaluacionData({ ...evaluacionData, comentarios_revisor: e.target.value })}
+                className={`w-full p-3 border rounded text-sm resize-none h-28 outline-none focus:ring-2 ${evaluacionData.estado_revision_id === 3 ? 'focus:ring-orange-500 border-orange-200' : 'focus:ring-green-500'
+                  }`}
+                placeholder={evaluacionData.estado_revision_id === 3
+                  ? "Describe los errores encontrados para que el abogado pueda subsanarlos..."
+                  : "Comentarios adicionales para el abogado (opcional, pero recomendado para mejorar la comunicación)"}
+              />
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsEvaluarModalOpen(false)}
+                className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={!evaluacionData.estado_revision_id}
+                className={`px-6 py-2 text-white font-bold rounded shadow-md transition disabled:bg-gray-300 disabled:cursor-not-allowed ${evaluacionData.estado_revision_id === 3 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'
+                  }`}
+              >
+                Confirmar Evaluación
               </button>
             </div>
 

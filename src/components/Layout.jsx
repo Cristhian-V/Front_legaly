@@ -17,6 +17,17 @@ const Layout = () => {
 
   const [cargando, setCargando] = useState(true);
 
+  const cargarCatalogos = async () => {
+    try {
+      // Suponiendo que tienes un servicio para esto
+      const data = await listadoService.traerListados(); 
+      setCatalogos(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+
   // Cargamos el perfil UNA SOLA VEZ para toda la aplicación
   useEffect(() => {
     const cargarPerfil = async () => {
@@ -82,7 +93,7 @@ const Layout = () => {
             <button onClick={() => navigate('/dashboard')} className={getNavStyle('/dashboard')}>Inicio</button>
             <button onClick={() => navigate('/expedientes')} className={getNavStyle('/expedientes')}>Expedientes</button>
             <button onClick={() => navigate('/revisiones')} className={getNavStyle('/revisiones')}>Bandeja de Revisiones</button>
-            <button className={getNavStyle('/clientes')}>Clientes</button>
+            <button onClick={() => navigate('/clientes')} className={getNavStyle('/clientes')}>Clientes</button>
             <button className={getNavStyle('/calendario')}>Documentos Pendientes</button>
           </div>
           <div className="pt-4 border-t border-gray-800 space-y-2">
@@ -122,7 +133,7 @@ const Layout = () => {
 
         {/* AQUÍ SE INYECTA EL CONTENIDO DINÁMICO (Inicio o Expedientes) */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          <Outlet context={{ datosUsuario, catalogos , casosPendientes}} />
+          <Outlet context={{ datosUsuario, catalogos , casosPendientes, recargarCatalogos: cargarCatalogos}} />
         </div>
       </div>
     </div>

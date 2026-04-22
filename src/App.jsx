@@ -7,6 +7,8 @@ import Dashboard from './pages/Inicio';
 import Expedientes from './pages/Expedientes';
 import DetalleExpediente from './pages/DetalleExpediente';
 import BandejaRevisiones from './pages/BandejaRevisiones';
+import Clientes from './pages/Clientes'; // Nueva página para clientes
+import DetalleCliente from './pages/DetalleClientes';
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
             <Route path="/expedientes" element={<Expedientes />} />
             <Route path="/expedientes/:id" element={<DetalleExpediente />} />
             <Route path="/revisiones" element={<BandejaRevisiones />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/clientes/:id" element={<DetalleCliente />} />
             {/* Aquí añadirás más adelante <Route path="/clientes" ... /> */}
           </Route>
         </Routes>

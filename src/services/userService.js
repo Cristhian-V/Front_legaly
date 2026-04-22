@@ -28,15 +28,7 @@ const obtenerCasos = async () => {
   }
 };
 
-const obtenerEventos = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/eventos`);
-    return response.data;
-  } catch (error) {
-    console.error("Error al obtener los eventos:", error);
-    throw error;
-  }
-};
+
 
 const obtenerCasosPendientes = async () => {
   try {
@@ -52,7 +44,6 @@ const obtenerCasosPendientes = async () => {
 const userService = {
   obtenerPerfil,
   obtenerCasos,
-  obtenerEventos,
   obtenerCasosPendientes
 };
 

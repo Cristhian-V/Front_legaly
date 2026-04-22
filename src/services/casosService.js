@@ -142,7 +142,28 @@ const revisarCaso = async (expediente_id) => {
     const response = await axios.patch(`${API_URL}/revisiones/${expediente_id}/iniciar`,{});
     return response.data;
   } catch (error) {
+    console.error("Error al iniciar la revisión del caso:", error);
+    throw error;
+  }
+};
+
+const aprobarObservarCaso = async (revision_id, datosEvaluacion) => {
+  try {
+  const response = await axios.put(`${API_URL}/revisiones/${revision_id}`, datosEvaluacion);
+  return response.data;
+
+  } catch (error) {
     console.error("Error al revisar el caso:", error);
+    throw error;
+  }
+};
+
+const obtenerRevisionActiva = async (expediente_id) => {
+  try {
+    const response = await axios.get(`${API_URL}/${expediente_id}/revisionActiva`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener la revisión activa del caso:", error);
     throw error;
   }
 };
@@ -158,7 +179,9 @@ const casosService = {
   eliminarMiembroEquipo,
   obtenerHistorialCaso,
   solicitarRevision,
-  revisarCaso
+  aprobarObservarCaso,
+  revisarCaso,
+  obtenerRevisionActiva
 };
 
 export default casosService;

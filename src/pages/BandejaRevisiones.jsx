@@ -1,33 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // Importaciones de servicios
-import userService from '../services/userService';
 import casosService from '../services/casosService';
+import userService from '../services/userService';
 
 const BandejaRevisiones = () => {
   const navigate = useNavigate();
-  const { casosPendientes } = useOutletContext();
 
-  const [cargando, setCargando] = useState(!casosPendientes);
-  const [casos_pendientes, setCasosPendientes] = useState(casosPendientes || []);
+  const [casosPendientes, setCasosPendientes] = useState();
   // --- NUEVO ESTADO PARA PESTAÑAS ---
   const [pestañaActiva, setPestañaActiva] = useState('pendientes'); // 'pendientes' o 'en_revision'
 
-  // Si entró por el menú lateral (no hay datos previos), hacemos la petición al backend
-  const RecargaCasosPendientes = async () => {
+  // Funcion de cargar casos pendientes
+  const cargarCasosPendientes = async () => {
     try {
       const data = await userService.obtenerCasosPendientes();
       setCasosPendientes(data);
-      setCargando(false);
     } catch (error) {
-      console.error("Error al cargar revisiones:", error);
-      setCargando(false);
+      console.error("Error al cargar casos pendientes:", error);
     }
   };
 
+
   useEffect(() => {
-  }, [casosPendientes]);
+    cargarCasosPendientes();
+  }, [casosPendientes]);  
 
   // Función para formatear la fecha de forma amigable
   const formatearFecha = (fechaISO) => {
@@ -60,10 +58,10 @@ const BandejaRevisiones = () => {
   const handleEvaluar = async (revision) => {
     try {
       // Si está pendiente (1), iniciamos la revisión en el backend
+      console.log(revision)
       if (revision.estado_id === 1) {
         const response = await casosService.revisarCaso(revision.revision_id); 
         console.log("Revisión iniciada con éxito:", response);
-        RecargaCasosPendientes(); // Recargamos la lista para actualizar el estado de la revisión
         navigate(`/expedientes/${response.expediente_id || revision.expediente_id}`);
       } else {
         // Si ya está en revisión (4), solo lo redirigimos al expediente sin hacer PATCH
@@ -77,7 +75,7 @@ const BandejaRevisiones = () => {
 
   // --- LÓGICA DE FILTRADO PARA PESTAÑAS ---
   // Extraemos el array (asegurándonos de que no sea undefined)
-  const listaCompleta = casos_pendientes?.pendientes || [];
+  const listaCompleta = casosPendientes?.pendientes || [];
 
   // Filtramos dependiendo de la pestaña
   
@@ -87,8 +85,6 @@ const BandejaRevisiones = () => {
     if (pestañaActiva === 'en_revision') return rev.estado_id === 4;
     return true;
   });
-
-  if (cargando) return <div className="p-20 text-center animate-pulse text-gray-500">Cargando bandeja de revisiones...</div>;
 
   return (
     <main className="p-8 max-w-7xl mx-auto">
@@ -143,7 +139,6 @@ const BandejaRevisiones = () => {
                   <th className="p-4 font-semibold">Caso / Expediente</th>
                   <th className="p-4 font-semibold">Solicitado Por</th>
                   <th className="p-4 font-semibold">Fecha de Solicitud</th>
-                  <th className="p-4 font-semibold text-center">Prioridad</th>
                   <th className="p-4 font-semibold text-right">Acción</th>
                 </tr>
               </thead>
@@ -168,12 +163,6 @@ const BandejaRevisiones = () => {
 
                     <td className="p-4 text-sm text-gray-600">
                       {formatearFecha(revision.fecha_envio)}
-                    </td>
-
-                    <td className="p-4 text-center">
-                      <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200">
-                        Alta
-                      </span>
                     </td>
 
                     <td className="p-4 text-right">
