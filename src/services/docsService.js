@@ -23,10 +23,10 @@ const obtenerDocumentosCaso = async (expediente_id) => {
 //=============================================================
 const subirDocumentoCaso = async (formData) => {
   try {
-    const response = await axios.post(`${API_URL}/${formData.get('expediente_id')}/documentacion`,formData,{
+    const response = await axios.post(`${API_URL}/${formData.get('expediente_id')}/documentacion`, formData, {
       headers: {
-          'Content-Type': 'multipart/form-data', // MUY IMPORTANTE PARA ARCHIVOS
-        },
+        'Content-Type': 'multipart/form-data', // MUY IMPORTANTE PARA ARCHIVOS
+      },
     });
     return response.data;
   } catch (error) {
@@ -46,22 +46,38 @@ const eliminarDocumentoCaso = async (docId) => {
 };
 
 const subirNuevaVersion = async (documentoId, formData) => {
-  // Asegúrate de enviar los headers correctos para archivos (multipart/form-data)
-  const response = await axios.post(`${API_URL}/${documentoId}/nueva_version`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    withCredentials: true
-  });
-  return response.data;
+  try {
+    // Asegúrate de enviar los headers correctos para archivos (multipart/form-data)
+    const response = await axios.post(`${API_URL}/${documentoId}/nueva_version`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al eliminar el documento:", error);
+    throw error;
+  }
 };
+
+const crearDocumentoBlanco = async (expedienteId, data) => {
+  try {
+    // data debe contener: nombreArchivo, tipoPlantilla, tipoDocumento
+    const response = await axios.post(`${API_URL}/${expedienteId}/crearDocumento`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error al eliminar el documento:", error);
+    throw error;
+  }
+}
 
 
 const docsService = {
   obtenerDocumentosCaso,
   subirDocumentoCaso,
   eliminarDocumentoCaso,
-  subirNuevaVersion
+  subirNuevaVersion,
+  crearDocumentoBlanco
 };
 
 export default docsService;

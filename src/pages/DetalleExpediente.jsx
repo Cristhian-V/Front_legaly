@@ -39,6 +39,14 @@ const DetalleExpediente = () => {
     documentos_ids: [] // Array para guardar los IDs de los documentos seleccionados
   });
 
+  // ---  ESTADOS PARA CREAR DOCUMENTO ONLINE ---
+  const [isCrearDocOpen, setIsCrearDocOpen] = useState(false);
+  const [nuevoDocData, setNuevoDocData] = useState({
+    nombreArchivo: '',
+    tipoPlantilla: 'word', // Por defecto word
+    tipoDocumento: ''
+  });
+
   // --- 3. ESTADOS DE FORMULARIOS ---
   const [formData, setFormData] = useState({
     cliente: '', titulo: '', descripcion: '', areaLegal: '', responsable: '', contraparte: ''
@@ -309,7 +317,7 @@ const DetalleExpediente = () => {
       // IMPORTANTE: Necesitas el ID de la revisión activa.
       // Asumo que tu backend manda esto en el detalle del caso, ej: detalleCaso.caso.revision_actual_id
       // Si se llama diferente, ajusta esta variable:
-      
+
       const idRevision = await casosService.obtenerRevisionActiva(id); // Implementa esta función para obtener el ID de la revisión activa del caso
       console.log("ID de revisión activa:", idRevision);
       if (!idRevision.id_activo) {
@@ -326,6 +334,53 @@ const DetalleExpediente = () => {
     } catch (error) {
       console.error("Error al enviar la evaluación:", error);
       alert("Hubo un error al procesar tu respuesta.");
+    }
+  };
+
+  // LOGICA DE CREACION DE ARCHIVO EN BLANCO DESDE LA PLATAFORMA (WORD EXCEL, ETC)
+  // Función para evaluar si el archivo es ofimática (Word, Excel, PPT)
+  const esEditableOnline = (extension) => {
+    const ext = extension?.toLowerCase().replace('.', '') || '';
+    return ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext);
+  };
+
+  // Función para abrir la pestaña del editor de Collabora
+  const handleAbrirOnline = (docId) => {
+    // Esta es la URL de tu frontend que embebe Collabora (Bloque 2)
+    const wopiUrl = `https://office.cumbre.com.bo/browser/dist/cool.html?WOPISrc=https://api.cumbre.com.bo/wopi/files/${docId}`;
+    window.open(wopiUrl, '_blank'); // Abrimos en nueva pestaña para tener pantalla completa
+  };
+
+  // Manejador para guardar el documento en blanco
+  const handleCrearDocBlanco = async (e) => {
+    e.preventDefault();
+    if (!nuevoDocData.nombreArchivo || !nuevoDocData.tipoDocumento) {
+      return alert("Completa el nombre y el tipo de documento.");
+    }
+
+    try {
+      setCargando(true);
+      // 1. Llamamos a tu Bloque 1 (Backend crea el archivo)
+      const res = await docsService.crearDocumentoBlanco(id, nuevoDocData);
+
+      // 2. Cerramos modal y recargamos tabla
+      setIsCrearDocOpen(false);
+      setNuevoDocData({ nombreArchivo: '', tipoPlantilla: 'word', tipoDocumento: '' });
+
+      const resDocs = await docsService.obtenerDocumentosCaso(id);
+      setDocumentos(resDocs);
+
+      // 3. (Opcional UX) Preguntamos si quiere abrirlo de inmediato
+      if (window.confirm("Documento creado exitosamente. ¿Deseas abrir el editor ahora?")) {
+        // Asegúrate de extraer el ID correctamente según tu JSON ("documentacion.id")
+        handleAbrirOnline(res.documentacion.id);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("Error al crear el documento en blanco.");
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -573,7 +628,14 @@ const DetalleExpediente = () => {
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold">Documentos del Expediente</h3>
-            <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#0F172A] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md">+ Subir Documento</button>
+            <div className="flex gap-3">
+              <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+                + Doc en Blanco
+              </button>
+              <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#0F172A] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">
+                + Subir Documento
+              </button>
+            </div>
           </div>
 
           {!documentos.documentacion?.length ? (
@@ -602,7 +664,18 @@ const DetalleExpediente = () => {
                       <td className="p-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{doc.tipo_documento}</span></td>
                       <td className="p-4 text-sm text-gray-500">{doc.responsable}</td>
                       <td className="p-4 text-right">
-                        <button onClick={() => handleVerDocumento(doc.url_archivo)} className="text-blue-600 font-bold text-xs mr-4">Ver</button>
+
+                        {/* NUEVO BOTÓN: Solo se muestra si es doc/docx, xls/xlsx, ppt/pptx */}
+                        {esEditableOnline(doc.extension) && (
+                          <button
+                            onClick={() => handleAbrirOnline(doc.id)}
+                            className="text-green-600 hover:text-green-800 font-bold text-xs mr-4 transition flex items-center inline-flex gap-1"
+                          >
+                            <span>📝</span> Abrir Editor
+                          </button>
+                        )}
+
+                        <button onClick={() => handleVerDocumento(doc.url_archivo)} className="text-blue-600 hover:text-blue-800 font-bold text-xs mr-4">Ver</button>
                         <button onClick={() => abrirModalModificar(doc)} className="text-yellow-600 hover:text-yellow-800 font-bold text-xs mr-4 transition-colors">
                           Modificar
                         </button>
@@ -1002,8 +1075,8 @@ const DetalleExpediente = () => {
 
               {/* Opción: APROBADO (Estado 2) */}
               <label className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${evaluacionData.estado_revision_id === 2
-                  ? 'border-green-500 bg-green-50 shadow-md'
-                  : 'border-gray-200 hover:border-green-200 hover:bg-gray-50'
+                ? 'border-green-500 bg-green-50 shadow-md'
+                : 'border-gray-200 hover:border-green-200 hover:bg-gray-50'
                 }`}>
                 <input
                   type="radio"
@@ -1022,8 +1095,8 @@ const DetalleExpediente = () => {
 
               {/* Opción: CON OBSERVACIONES (Estado 3) */}
               <label className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${evaluacionData.estado_revision_id === 3
-                  ? 'border-orange-500 bg-orange-50 shadow-md'
-                  : 'border-gray-200 hover:border-orange-200 hover:bg-gray-50'
+                ? 'border-orange-500 bg-orange-50 shadow-md'
+                : 'border-gray-200 hover:border-orange-200 hover:bg-gray-50'
                 }`}>
                 <input
                   type="radio"
@@ -1073,6 +1146,80 @@ const DetalleExpediente = () => {
                   }`}
               >
                 Confirmar Evaluación
+              </button>
+            </div>
+
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Crear Documento en Blanco */}
+      {isCrearDocOpen && (
+        <Modal title="Crear Nuevo Documento (Online)" onClose={() => setIsCrearDocOpen(false)}>
+          <form onSubmit={handleCrearDocBlanco}>
+            
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
+              <p className="text-sm text-blue-800">
+                Se generará un archivo en blanco en el servidor. Luego podrás abrirlo directamente en el <strong>Editor en la Nube</strong>.
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <Label text="Nombre del Archivo *" />
+              <input 
+                required
+                type="text"
+                placeholder="Ej. Contrato de Prestación de Servicios"
+                value={nuevoDocData.nombreArchivo}
+                onChange={(e) => setNuevoDocData({...nuevoDocData, nombreArchivo: e.target.value})}
+                className="w-full p-2.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <Label text="Formato (Plantilla) *" />
+                <select 
+                  value={nuevoDocData.tipoPlantilla}
+                  onChange={(e) => setNuevoDocData({...nuevoDocData, tipoPlantilla: e.target.value})}
+                  className="w-full p-2.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="word">Word (.docx)</option>
+                  <option value="excel">Excel (.xlsx)</option>
+                  {/* Opcional: <option value="ppt">PowerPoint (.pptx)</option> */}
+                </select>
+              </div>
+
+              <div>
+                <Label text="Categoría del Documento *" />
+                <select 
+                  required
+                  value={nuevoDocData.tipoDocumento}
+                  onChange={(e) => setNuevoDocData({...nuevoDocData, tipoDocumento: e.target.value})}
+                  className="w-full p-2.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="">Seleccione...</option>
+                  {/* Asumiendo que tu contexto se llama catalogos.catalogos.tipos_documento */}
+                  {catalogos?.catalogos?.tipos_documento?.map(t => (
+                    <option key={t.id} value={t.id}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button 
+                type="button" 
+                onClick={() => setIsCrearDocOpen(false)} 
+                className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 transition"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-md transition"
+              >
+                Crear y Guardar
               </button>
             </div>
 
