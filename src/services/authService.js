@@ -3,8 +3,8 @@ import axios from 'axios';
 //configuracion axios para enviar cookies en cada solicitud
 axios.defaults.withCredentials = true; 
 
-// Definimos la URL base de tu backend
-const API_URL = 'http://localhost:3000/api/auth';
+// Definimos la URL base de tu backend 
+const API_URL = `${import.meta.env.VITE_API_URL}/auth`;
 
 const login = async (name_user, password) => {
   try {

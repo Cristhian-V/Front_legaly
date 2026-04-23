@@ -2,7 +2,8 @@ import axios from 'axios';
 
 axios.defaults.withCredentials = true;
 
-const API_URL = 'http://localhost:3000/api/cliente';
+// Definimos la URL base de tu backend 
+const API_URL = `${import.meta.env.VITE_API_URL}/cliente`;
 
 
 // --- MÓDULO DE CLIENTES ---

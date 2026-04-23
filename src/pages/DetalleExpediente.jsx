@@ -175,9 +175,34 @@ const DetalleExpediente = () => {
     }
   };
 
-  const handleVerDocumento = (ruta) => {
+const handleVerDocumento = async (ruta) => {
     if (!ruta) return alert("Ruta no válida");
-    window.open(`http://localhost:3000/api/docs/ver?ruta=${encodeURIComponent(ruta)}`, '_blank');
+    
+    try {
+      // 1. Obtenemos el archivo puro (Blob)
+      const fileBlob = await docsService.verDocumento(ruta);
+      
+      // 2. Le creamos una URL temporal en la memoria del navegador
+      const fileURL = URL.createObjectURL(fileBlob);
+      
+      // 3. ¡Ahora sí! Abrimos la URL temporal
+      window.open(fileURL, '_blank');
+
+      //4. descargamos el archivo directamente con su nombre otiginal
+      const link = document.createElement('a');
+      link.href = fileURL;  
+      const nombreArchivo = ruta.split('\\').pop(); // Extraemos el nombre del archivo de la ruta
+      link.download = nombreArchivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link); // Limpiamos el DOM
+
+      // Opcional pero recomendado: Limpiar la memoria después de unos segundos
+      setTimeout(() => URL.revokeObjectURL(fileURL), 10000);
+      
+    } catch (error) {
+      alert("Error al intentar abrir el archivo:" + error);
+    }
   };
 
   const handleEliminarDocumento = async (docId) => {

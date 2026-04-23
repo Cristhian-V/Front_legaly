@@ -1,8 +1,8 @@
 import axios from 'axios';
 axios.defaults.withCredentials = true; 
 
-const API_URL = 'http://localhost:3000/api/calendario'; 
-
+// Definimos la URL base de tu backend 
+const API_URL = `${import.meta.env.VITE_API_URL}/calendario`;
 
 
 const obtenerEventos = async () => {

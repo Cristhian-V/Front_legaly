@@ -2,7 +2,9 @@ import axios from "axios";
 
 axios.defaults.withCredentials = true;
 
-const API_URL = "http://localhost:3000/api/docs";
+// Definimos la URL base de tu backend 
+const API_URL = `${import.meta.env.VITE_API_URL}/docs`;
+
 
 // =============================================================
 // Función para obtener los documentos de un caso específico
@@ -71,13 +73,30 @@ const crearDocumentoBlanco = async (expedienteId, data) => {
   }
 }
 
+const verDocumento = async (rutaArchivo) => {
+  try {
+    const response = await axios.get(`${API_URL}/ver`, {
+      // Axios convierte "params" automáticamente en req.query.ruta
+      params: { 
+        ruta: rutaArchivo 
+      },
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al intentar abrir el documento:", error);
+    throw error;
+  }
+}  
+
 
 const docsService = {
   obtenerDocumentosCaso,
   subirDocumentoCaso,
   eliminarDocumentoCaso,
   subirNuevaVersion,
-  crearDocumentoBlanco
+  crearDocumentoBlanco,
+  verDocumento
 };
 
 export default docsService;
