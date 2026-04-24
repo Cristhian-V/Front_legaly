@@ -73,9 +73,9 @@ const crearDocumentoBlanco = async (expedienteId, data) => {
   }
 }
 
-const verDocumento = async (rutaArchivo) => {
+const descargarDocumento = async (rutaArchivo) => {
   try {
-    const response = await axios.get(`${API_URL}/ver`, {
+    const response = await axios.get(`${API_URL}/descargar`, {
       // Axios convierte "params" automáticamente en req.query.ruta
       params: { 
         ruta: rutaArchivo 
@@ -96,7 +96,7 @@ const docsService = {
   eliminarDocumentoCaso,
   subirNuevaVersion,
   crearDocumentoBlanco,
-  verDocumento
+  descargarDocumento
 };
 
 export default docsService;

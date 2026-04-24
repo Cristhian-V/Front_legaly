@@ -8,7 +8,7 @@ const Expedientes = () => {
   const [busqueda, setBusqueda] = useState('');
   const [casos, setCasos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const {  catalogos } = useOutletContext();
+  const { catalogos } = useOutletContext();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -34,7 +34,7 @@ const Expedientes = () => {
       const [respuestaCasos] = await Promise.all([
         casosService.obtenerCasos()
       ]);
-      
+
       setCasos(respuestaCasos.casos);
 
     } catch (error) {
@@ -58,24 +58,24 @@ const Expedientes = () => {
   // --- FUNCIÓN ACTUALIZADA: COLORES POR ESTADO ---
   const getEstadoBadge = (estado) => {
     switch (estado) {
-      case 'Pendiente': 
+      case 'Pendiente':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'Aprobado': 
+      case 'Aprobado':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'Con Observaciones': 
+      case 'Con Observaciones':
         return 'bg-red-100 text-red-800 border-red-300';
-      case 'En Revisión': 
+      case 'En Revisión':
         return 'bg-indigo-100 text-indigo-800 border-indigo-300';
-      case 'Revisado': 
+      case 'Revisado':
         return 'bg-teal-100 text-teal-800 border-teal-300';
-      case 'En elaboración': 
+      case 'En elaboración':
         return 'bg-purple-100 text-purple-800 border-purple-300';
       // Mantenemos algunos por defecto por si tienes datos antiguos
-      case 'Activo': 
+      case 'Activo':
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-      case 'Cerrado': 
+      case 'Cerrado':
         return 'bg-gray-100 text-gray-800 border-gray-300';
-      default: 
+      default:
         return 'bg-gray-100 text-gray-600 border-gray-200';
     }
   };
@@ -122,7 +122,7 @@ const Expedientes = () => {
           />
         </div>
 
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="w-full md:w-auto bg-[#0F172A] hover:bg-slate-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2"
         >
@@ -158,13 +158,13 @@ const Expedientes = () => {
                     <td className="p-4 text-gray-600">{caso.responsable_nombre}</td>
                     <td className="p-4 text-center">
                       {/* Aquí se aplica la función para los colores dinámicos */}
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getEstadoBadge(caso.estado_nombre)}`}>
+                      <span className={`inline-block px-3 py-1.5 rounded-xl text-xs font-bold border text-center leading-tight shadow-sm ${getEstadoBadge(caso.estado_nombre)}`}>
                         {caso.estado_nombre}
                       </span>
                     </td>
                     <td className="p-4 text-center">
                       <button
-                        onClick={() => navigate(`/expedientes/${caso.expediente_id}`)} 
+                        onClick={() => navigate(`/expedientes/${caso.expediente_id}`)}
                         className="text-blue-600 hover:text-blue-900 font-medium text-sm px-3 py-1 rounded hover:bg-blue-50 transition"
                       >
                         Ver Detalle
@@ -188,7 +188,7 @@ const Expedientes = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
-            
+
             <div className="bg-[#080E21] px-6 py-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-white">Crear Nuevo Expediente</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-300 hover:text-white text-2xl font-light">×</button>
@@ -196,10 +196,10 @@ const Expedientes = () => {
 
             <form onSubmit={handleSubmit} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Título / Descripción Corta *</label>
-                  <input type="text" name="titulo" required value={formData.titulo} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej. Demanda Laboral Juan Pérez"/>
+                  <input type="text" name="titulo" required value={formData.titulo} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej. Demanda Laboral Juan Pérez" />
                 </div>
 
                 <div>
@@ -214,7 +214,7 @@ const Expedientes = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Contraparte</label>
-                  <input type="text" name="contraparte" value={formData.contraparte} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nombre de la contraparte"/>
+                  <input type="text" name="contraparte" value={formData.contraparte} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nombre de la contraparte" />
                 </div>
 
                 <div>

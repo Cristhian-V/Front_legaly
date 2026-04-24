@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import userService from '../services/userService';
-import listadoService from '../services/listadosService'
+import listadoService from '../services/listadosService';
 import logoAyP from '../image/LogoAyP.png'; 
+
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -94,10 +95,10 @@ const Layout = () => {
             <button onClick={() => navigate('/expedientes')} className={getNavStyle('/expedientes')}>Expedientes</button>
             <button onClick={() => navigate('/revisiones')} className={getNavStyle('/revisiones')}>Bandeja de Revisiones</button>
             <button onClick={() => navigate('/clientes')} className={getNavStyle('/clientes')}>Clientes</button>
-            <button className={getNavStyle('/calendario')}>Documentos Pendientes</button>
+            <button onClick={() => navigate('/carpetas')} className={getNavStyle('/carpetas')}>Control Documental</button>
           </div>
           <div className="pt-4 border-t border-gray-800 space-y-2">
-            <button className={getNavStyle('/configuracion')}>Configuración</button>
+            <button onClick={() => navigate('/configuracion')} className={getNavStyle('/configuracion')}>Configuración</button>
             <button onClick={handleLogout} className="w-full text-left px-4 py-3 rounded-md hover:bg-slate-700 hover:text-white transition-all text-gray-300 font-medium">Cerrar Sesión</button>
           </div>
         </nav>

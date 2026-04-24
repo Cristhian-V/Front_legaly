@@ -175,33 +175,36 @@ const DetalleExpediente = () => {
     }
   };
 
-const handleVerDocumento = async (ruta) => {
+const handleDescargarDocumento = async (ruta) => {
     if (!ruta) return alert("Ruta no válida");
     
     try {
       // 1. Obtenemos el archivo puro (Blob)
-      const fileBlob = await docsService.verDocumento(ruta);
+      const fileBlob = await docsService.descargarDocumento(ruta);
       
-      // 2. Le creamos una URL temporal en la memoria del navegador
+      // 2. Le creamos una URL temporal
       const fileURL = URL.createObjectURL(fileBlob);
       
-      // 3. ¡Ahora sí! Abrimos la URL temporal
-      window.open(fileURL, '_blank');
+      // 3. ELIMINAMOS window.open(fileURL, '_blank'); <-- ¡Esta era la culpable!
 
-      //4. descargamos el archivo directamente con su nombre otiginal
+      // 4. Descargamos el archivo directamente con su nombre original
       const link = document.createElement('a');
       link.href = fileURL;  
-      const nombreArchivo = ruta.split('\\').pop(); // Extraemos el nombre del archivo de la ruta
+      
+      // Extraemos el nombre del archivo de la ruta (Ej. "contrato.pdf")
+      // Nota: Usamos replace(/\\/g, '/') para asegurar que funcione en Windows y Linux
+      const nombreArchivo = ruta.replace(/\\/g, '/').split('/').pop(); 
+      
       link.download = nombreArchivo;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link); // Limpiamos el DOM
 
-      // Opcional pero recomendado: Limpiar la memoria después de unos segundos
+      // 5. Limpiamos la memoria
       setTimeout(() => URL.revokeObjectURL(fileURL), 10000);
       
     } catch (error) {
-      alert("Error al intentar abrir el archivo:" + error);
+      alert("Error al intentar descargar el archivo: " + error);
     }
   };
 
@@ -700,7 +703,7 @@ const handleVerDocumento = async (ruta) => {
                           </button>
                         )}
 
-                        <button onClick={() => handleVerDocumento(doc.url_archivo)} className="text-blue-600 hover:text-blue-800 font-bold text-xs mr-4">Ver</button>
+                        <button onClick={() => handleDescargarDocumento(doc.url_archivo)} className="text-blue-600 hover:text-blue-800 font-bold text-xs mr-4">Descargar</button>
                         <button onClick={() => abrirModalModificar(doc)} className="text-yellow-600 hover:text-yellow-800 font-bold text-xs mr-4 transition-colors">
                           Modificar
                         </button>
