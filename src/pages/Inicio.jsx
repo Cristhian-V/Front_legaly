@@ -35,7 +35,7 @@ const Inicio = () => {
       const [respuestaPerfil, respuestaCasos, respuestaEventos] = await Promise.all([
         userService.obtenerPerfil(),
         userService.obtenerCasos(),
-        calendarioService.obtenerEventos() // Esta función debe llamar a /api/calendario
+        calendarioService.obtenerEventos() 
       ]);
 
       setDatosUsuario({
@@ -96,6 +96,7 @@ const Inicio = () => {
   return (
     <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
       {/* TARJETAS DE RESUMEN */}
+      {console.log(eventos)}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
@@ -114,16 +115,6 @@ const Inicio = () => {
               <p className="text-4xl font-black text-gray-800 mt-2">{datosUsuario?.casos?.resumen?.eventosActivos || 0}</p>
             </div>
             <img src={iconAudiencias} alt="Eventos" width="70" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#9333EA] hover:shadow-2xl transition-all cursor-pointer">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-gray-500 text-sm font-bold uppercase">Doc Recibidos</h3>
-              <p className="text-4xl font-black text-gray-800 mt-2">0</p>
-            </div>
-            <img src={iconDocs} alt="Docs" width="70" />
           </div>
         </div>
 

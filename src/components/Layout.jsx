@@ -74,6 +74,29 @@ const Layout = () => {
       : `${baseStyle} hover:bg-slate-700 hover:text-white text-gray-300`; // Estilo Inactivo
   };
 
+  // Función para asignar el nombre de la sección según la ruta actual
+  const obtenerTituloSeccion = (path) => {
+    // 1. Diccionario para rutas exactas
+    const titulosExactos = {
+      '/': 'Panel de Control Legaly',
+      '/expedientes': 'Gestión de Expedientes',
+      '/clientes': 'Directorio de Clientes',
+      '/configuracion': 'Configuración del Sistema',
+      '/revisiones': 'Bandeja de Revisiones',
+      '/calendario': 'Calendario Global',
+      '/carpetas': 'Gestion de Documentacion'
+    };
+
+    if (titulosExactos[path]) return titulosExactos[path];
+
+    // 2. Comprobaciones para rutas dinámicas (con IDs)
+    if (path.startsWith('/expedientes/')) return 'Detalle de Expediente';
+    if (path.startsWith('/clientes/')) return 'Perfil del Cliente';
+    
+    // 3. Fallback por defecto si la ruta no está mapeada
+    return 'Panel de Control Legaly';
+  };
+
   if (cargando) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#080E21]">
@@ -111,7 +134,7 @@ const Layout = () => {
           <div className="pl-8 flex flex-col justify-center">
             {/* Título dinámico según la ruta */}
             <h2 className="text-xl font-semibold text-gray-700">
-              {location.pathname === '/expedientes' ? 'Gestión de Expedientes' : 'Panel de Control Legaly'}
+              {obtenerTituloSeccion(location.pathname)}
             </h2>
             <p className="text-sm text-gray-500">Bienvenido al sistema</p>
           </div>
@@ -122,13 +145,7 @@ const Layout = () => {
                 <span className="font-semibold text-gray-800">{datosUsuario.nombre_completo}</span>
               </div>
             </div>
-            <div className="h-full w-24 border-l border-gray-200 bg-gray-100 overflow-hidden">
-              <img
-                src={datosUsuario.avatar_url || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            </div>
+
           </div>
         </header>
 
