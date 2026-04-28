@@ -9,7 +9,6 @@ import calendarioService from '../services/calendarioService';
 // Importación de imágenes 
 import iconCasos from '../image/IconCasos.png';
 import iconAudiencias from '../image/IconAdiencias.png';
-import iconDocs from '../image/IconDocPendientes.png';
 import iconRevisar from '../image/IconRevisar.png';
 
 const Inicio = () => {
@@ -98,7 +97,7 @@ const Inicio = () => {
       {/* TARJETAS DE RESUMEN */}
       {console.log(eventos)}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 hover:shadow-2xl transition-all cursor-pointer">
+        <div onClick={() => navigate('/expedientes')} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Casos Activos</h3>
@@ -123,6 +122,7 @@ const Inicio = () => {
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Revisiones Pendientes</h3>
               <p className="text-4xl font-black text-gray-800 mt-2">{casosPendientes?.casos_pendientes || 0}</p>
+              {console.log(casosPendientes)}
             </div>
             <img src={iconRevisar} alt="Revisar" width="70" />
           </div>

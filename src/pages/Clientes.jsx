@@ -59,26 +59,30 @@ const Clientes = () => {
 
   return (
     <main className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-[#080E21]">Cartera de Clientes</h1>
-          <p className="text-gray-600">Gestiona las empresas y personas representadas por la firma.</p>
+<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        
+        {/* Contenedor del Buscador */}
+        <div className="relative w-full md:w-96">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+            🔍
+          </span>
+          <input 
+            type="text" 
+            placeholder="Buscar por nombre o NIT..." 
+            value={busqueda} 
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+          />
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-[#0F172A] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition">
+
+        {/* Botón */}
+        <button 
+          onClick={() => setIsModalOpen(true)} 
+          className="bg-[#0F172A] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition-colors whitespace-nowrap w-full md:w-auto"
+        >
           + Nuevo Cliente
         </button>
-      </div>
 
-      {/* Buscador */}
-      <div className="mb-6 relative max-w-md">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Buscar por nombre o NIT..." 
-          value={busqueda} 
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-        />
       </div>
 
       {/* Tabla */}

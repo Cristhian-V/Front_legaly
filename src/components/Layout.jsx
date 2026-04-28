@@ -78,23 +78,47 @@ const Layout = () => {
   const obtenerTituloSeccion = (path) => {
     // 1. Diccionario para rutas exactas
     const titulosExactos = {
-      '/': 'Panel de Control Legaly',
-      '/expedientes': 'Gestión de Expedientes',
-      '/clientes': 'Directorio de Clientes',
-      '/configuracion': 'Configuración del Sistema',
-      '/revisiones': 'Bandeja de Revisiones',
-      '/calendario': 'Calendario Global',
-      '/carpetas': 'Gestion de Documentacion'
+      '/dashboard': {
+        'titulo': 'Panel de Control',
+        'descripcion':'Bienvenido/a al Sistema de Gestion de Expedientes de ALAIZA & PEDRAZA Abogados'
+      },
+      '/expedientes': {
+        'titulo':'Gestión de Expedientes',
+        'descripcion':'Podras Gestionar tus Expedientes y los de tu equipo desde aqui.'
+      },
+      '/clientes': {
+        'titulo': 'Directorio de Clientes',
+        'descripcion':'Gestiona las empresas y personas representadas por la firma.'
+      },
+      '/configuracion': {
+        'titulo':'Configuración del Sistema',
+        'descripcion':'Administra usuarios, roles, catálogos y preferencias de la firma.'
+      },
+      '/revisiones': {
+        'titulo': 'Bandeja de Revisiones',
+        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+      },
+      '/carpetas': {
+        'titulo': 'Gestion de Documentacion',
+        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+      }
     };
 
     if (titulosExactos[path]) return titulosExactos[path];
 
     // 2. Comprobaciones para rutas dinámicas (con IDs)
-    if (path.startsWith('/expedientes/')) return 'Detalle de Expediente';
-    if (path.startsWith('/clientes/')) return 'Perfil del Cliente';
-    
-    // 3. Fallback por defecto si la ruta no está mapeada
-    return 'Panel de Control Legaly';
+    if (path.startsWith('/dashboard/')) return {'titulo': 'Panel de Control',
+        'descripcion':'Bienvenido/a al Sistema de Gestion de Expedientes de ALAIZA & PEDRAZA Abogados'};
+    if (path.startsWith('/expedientes/')) return {'titulo':'Gestión de Expedientes',
+        'descripcion':'Podras Gestionar tus Expedientes y los de tu equipo desde aqui.'};
+    if (path.startsWith('/clientes/')) return {'titulo': 'Directorio de Clientes',
+        'descripcion':'Gestiona las empresas y personas representadas por la firma.'};
+    if (path.startsWith('/configuracion/')) return {'titulo':'Configuración del Sistema',
+        'descripcion':'Administra usuarios, roles, catálogos y preferencias de la firma.'};
+    if (path.startsWith('/revisiones/')) return {'titulo': 'Bandeja de Revisiones',
+        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'};
+    if (path.startsWith('/carpetas/')) return {'titulo': 'Gestion de Documentacion',
+        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'};
   };
 
   if (cargando) {
@@ -133,10 +157,10 @@ const Layout = () => {
         <header className="bg-white shadow-sm flex justify-between items-stretch border-b h-24">
           <div className="pl-8 flex flex-col justify-center">
             {/* Título dinámico según la ruta */}
-            <h2 className="text-xl font-semibold text-gray-700">
-              {obtenerTituloSeccion(location.pathname)}
+            <h2 className="text-3xl font-black text-[#080E21] mb-2">
+              {obtenerTituloSeccion(location.pathname).titulo}
             </h2>
-            <p className="text-sm text-gray-500">Bienvenido al sistema</p>
+            <p className="text-sm text-gray-500">{obtenerTituloSeccion(location.pathname).descripcion}</p>
           </div>
           <div className="flex items-center">
             <div className="flex items-center space-x-4 pr-6">

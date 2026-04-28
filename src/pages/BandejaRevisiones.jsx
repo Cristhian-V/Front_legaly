@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Importaciones de servicios
@@ -13,19 +13,19 @@ const BandejaRevisiones = () => {
   const [pestañaActiva, setPestañaActiva] = useState('pendientes'); // 'pendientes' o 'en_revision'
 
   // Funcion de cargar casos pendientes
-  const cargarCasosPendientes = async () => {
+const cargarCasosPendientes = useCallback(async () => {
     try {
       const data = await userService.obtenerCasosPendientes();
       setCasosPendientes(data);
     } catch (error) {
       console.error("Error al cargar casos pendientes:", error);
     }
-  };
+  }, []);
 
 
   useEffect(() => {
     cargarCasosPendientes();
-  }, [casosPendientes]);  
+  }, [cargarCasosPendientes]);  
 
   // Función para formatear la fecha de forma amigable
   const formatearFecha = (fechaISO) => {
@@ -88,13 +88,6 @@ const BandejaRevisiones = () => {
 
   return (
     <main className="p-8 max-w-7xl mx-auto">
-
-      {/* Encabezado */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-[#080E21] mb-2">Bandeja de Revisiones</h1>
-        <p className="text-gray-600">Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.</p>
-      </div>
-
       {/* Contenedor de la Bandeja */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
 

@@ -23,7 +23,7 @@ const DetalleExpediente = () => {
   const [detalleCaso, setDetalleCaso] = useState({});
   const [historialCaso, setHistorialCaso] = useState({ total_eventos: 0, historial: [] });
   const [idForm, setIdForm] = useState(null);
-  
+
   const [pestañaActiva, setPestañaActiva] = useState('general');
   const [cargando, setCargando] = useState(true);
 
@@ -32,12 +32,18 @@ const DetalleExpediente = () => {
   const [isAccionesOpen, setIsAccionesOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [isEvaluarModalOpen, setIsEvaluarModalOpen] = useState(false);
-  
+  // Estado para el modal de cierre
+  const [isCerrarModalOpen, setIsCerrarModalOpen] = useState(false);
+  const [cargandoCierre, setCargandoCierre] = useState(false);
+
   const [formData, setFormData] = useState({});
   const [revisionData, setRevisionData] = useState({ revisor_id: '', comentarios_solicitud: '', documentos_ids: [] });
   const [evaluacionData, setEvaluacionData] = useState({ estado_revision_id: '', comentarios_revisor: '' });
 
-const [listaDocumentos, setListaDocumentos] = useState([]);
+  const [listaDocumentos, setListaDocumentos] = useState([]);
+
+    // Evaluamos si el caso está cerrado basándonos en el estado general
+  const estaCerrado = detalleCaso.caso?.estado === 'Cerrado';
 
   const inicializarPagina = useCallback(async () => {
     const esAuth = await authService.isAuthenticated();
@@ -46,7 +52,7 @@ const [listaDocumentos, setListaDocumentos] = useState([]);
     try {
       setCargando(true);
       // Solo cargamos lo necesario para el header. Las pestañas cargarán lo suyo.
-      const [resDetalle, resIdForm, resHistorial,resDocs] = await Promise.all([
+      const [resDetalle, resIdForm, resHistorial, resDocs] = await Promise.all([
         casosService.obtenerDetalleCaso(id),
         casosService.obtenerIdForm(id),
         casosService.obtenerHistorialCaso(id), // Necesario para saber si el usuario solicitó la revisión actual
@@ -85,38 +91,38 @@ const [listaDocumentos, setListaDocumentos] = useState([]);
       await casosService.modificarCaso(id, formData);
       setIsEditModalOpen(false);
       inicializarPagina();
-    } catch (error) { alert("Error al actualizar el caso"); }
+    } catch (error) { alert("Error al actualizar el caso: " + error); }
   };
 
   // --- REVISIONES GLOBALES ---
   const handleSolicitarRevision = async (e) => {
     e.preventDefault();
     try {
-      if (+datosUsuario.id === +revisionData.revisor_id){
-      alert("El Solicitante y el Revisor no puede ser la misma persona");  
-      }else{
-      await casosService.solicitarRevision(id, revisionData.revisor_id, revisionData.comentarios_solicitud, revisionData.documentos_ids);
-      alert("Solicitud enviada");
-      setIsRevisionModalOpen(false);
-      inicializarPagina();
+      if (+datosUsuario.id === +revisionData.revisor_id) {
+        alert("El Solicitante y el Revisor no puede ser la misma persona");
+      } else {
+        await casosService.solicitarRevision(id, revisionData.revisor_id, revisionData.comentarios_solicitud, revisionData.documentos_ids);
+        alert("Solicitud enviada");
+        setIsRevisionModalOpen(false);
+        inicializarPagina();
       }
-    } catch (error) { alert("Error al solicitar revisión"); }
+    } catch (error) { alert("Error al solicitar revisión: " + error); }
   };
 
-// Función para manejar los checkboxes (dentro de revisiones)
-const handleDocCheckboxChange = (docId) => {
-  setRevisionData(prev => {
-    const yaSeleccionado = prev.documentos_ids.includes(docId);
-    return {
-      ...prev,
-      documentos_ids: yaSeleccionado
-        ? prev.documentos_ids.filter(id => id !== docId) // Quitar si ya está
-        : [...prev.documentos_ids, docId] // Añadir si no está
-    };
-  });
-};
+  // Función para manejar los checkboxes (dentro de revisiones)
+  const handleDocCheckboxChange = (docId) => {
+    setRevisionData(prev => {
+      const yaSeleccionado = prev.documentos_ids.includes(docId);
+      return {
+        ...prev,
+        documentos_ids: yaSeleccionado
+          ? prev.documentos_ids.filter(id => id !== docId) // Quitar si ya está
+          : [...prev.documentos_ids, docId] // Añadir si no está
+      };
+    });
+  };
 
-// --- MANEJADORES DE MODALES DE REVISIÓN ---
+  // --- MANEJADORES DE MODALES DE REVISIÓN ---
   const abrirModalRevision = () => {
     setRevisionData({ revisor_id: '', comentarios_solicitud: '', documentos_ids: [] });
     setIsRevisionModalOpen(true);
@@ -141,9 +147,9 @@ const handleDocCheckboxChange = (docId) => {
       await casosService.aprobarObservarCaso(idRevision.id_activo, evaluacionData);
       alert("La revisión ha sido completada.");
       setIsEvaluarModalOpen(false);
-      
-      // Puedes usar navigate('/revisiones') si quieres sacarlo de ahí, o solo recargar la página:
-      inicializarPagina(); 
+
+      inicializarPagina();
+      navigate('/revisiones')
     } catch (error) {
       console.error(error);
       alert("Hubo un error al procesar tu respuesta.");
@@ -158,7 +164,7 @@ const handleDocCheckboxChange = (docId) => {
     try {
       // 2. Buscamos el ID de la revisión que está activa actualmente
       const idRevision = await casosService.obtenerRevisionActiva(id);
-      
+
       if (!idRevision?.id_activo) {
         return alert("Error: No se encontró la revisión en curso.");
       }
@@ -168,12 +174,29 @@ const handleDocCheckboxChange = (docId) => {
 
       // 4. Éxito: Cerramos menú, avisamos y recargamos la vista
       alert("Solicitud de revisión cancelada exitosamente.");
-      setIsAccionesOpen(false); 
-      inicializarPagina(); 
+      setIsAccionesOpen(false);
+      inicializarPagina();
 
     } catch (error) {
       console.error("Error al cancelar la revisión:", error);
       alert(error.response?.data?.error || "Hubo un problema al intentar cancelar la solicitud.");
+    }
+  };
+
+  // --- CERRAR CASO ---
+  const handleCerrarCaso = async (e) => {
+    e.preventDefault();
+    try {
+      setCargandoCierre(true);
+      // Asumiendo que 'id' es el expediente_id de la URL que requiere tu backend
+      await casosService.cerrarCaso(id);
+      setIsCerrarModalOpen(false);
+      alert("El caso ha sido cerrado exitosamente.");
+      inicializarPagina(); // Recargamos para actualizar los badges y estados
+    } catch (error) {
+      alert(error.response?.data?.error || "Error al intentar cerrar el caso.");
+    } finally {
+      setCargandoCierre(false);
     }
   };
 
@@ -189,7 +212,7 @@ const handleDocCheckboxChange = (docId) => {
     <main className="p-8 max-w-7xl mx-auto relative">
       <button onClick={() => navigate('/expedientes')} className="flex items-center text-gray-500 hover:text-[#080E21] mb-6 transition-colors">← Volver a Casos</button>
 
-       {/* HEADER DEL CASO */}
+      {/* HEADER DEL CASO */}
       <div className="mb-8">
         <div className="flex gap-3 mb-3">
           <Badge text={detalleCaso.caso?.categoria_cliente} />
@@ -198,15 +221,14 @@ const handleDocCheckboxChange = (docId) => {
         </div>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-3xl font-black text-[#080E21]">{detalleCaso.caso?.titulo} - {detalleCaso.caso?.nombre_cliente}</h1>
-          <div className="flex gap-3">
-            <button onClick={abrirModalEdicion} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold shadow-sm">Editar</button>
-            {/* BOTÓN DESPLEGABLE DE ACCIONES */}
-            <div className="relative">
-              <button
-                onClick={() => setIsAccionesOpen(!isAccionesOpen)}
-                className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors">
-                Acciones <span className="text-xs">▼</span>
-              </button>
+          {!estaCerrado ? (
+            <div className="flex gap-3">
+              <button onClick={abrirModalEdicion} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold shadow-sm">Editar</button>
+              
+              <div className="relative">
+                <button onClick={() => setIsAccionesOpen(!isAccionesOpen)} className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors">
+                  Acciones <span className="text-xs">▼</span>
+                </button>
               {/* Menú Desplegable */}
               {isAccionesOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20 animate-fade-in-up">
@@ -226,7 +248,7 @@ const handleDocCheckboxChange = (docId) => {
                           )}
                           {/* ESCENARIO 2: PENDIENTE (1) para dueño el caso */}
                           {(estadoRev === "Pendiente" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
-                            <button 
+                            <button
                               onClick={handleCancelarRevision} // <--- AÑADIR ESTA LÍNEA
                               className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors"
                             >
@@ -262,6 +284,18 @@ const handleDocCheckboxChange = (docId) => {
                               <span className="text-lg">✅</span> Revisión Completada
                             </div>
                           )}
+                          {/* BOTÓN PARA CERRAR CASO (Siempre al final del menú si no está cerrado) */}
+                          {estadoRev !== "Cerrado" && (
+                            <button
+                              onClick={() => {
+                                setIsCerrarModalOpen(true);
+                                setIsAccionesOpen(false); // Cierra el dropdown
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors border-t border-gray-100 mt-1"
+                            >
+                              <span className="text-lg">🔒</span> Finalizar Caso
+                            </button>
+                          )}
                         </>
                       );
                     })()}
@@ -270,6 +304,12 @@ const handleDocCheckboxChange = (docId) => {
               )}
             </div>
           </div>
+          ) : (
+            /* Badge visual para indicar que es de Solo Lectura */
+            <div className="px-4 py-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-lg font-bold flex items-center gap-2">
+              <span>🔒</span> Modo Solo Lectura (Caso Cerrado)
+            </div>
+          )}
         </div>
       </div>
       {/* TABS SELECTOR */}
@@ -283,14 +323,14 @@ const handleDocCheckboxChange = (docId) => {
 
       {/* ENRUTADOR INTERNO DE PESTAÑAS (La magia sucede aquí) */}
       <div className="mt-8">
-        {pestañaActiva === 'general' && <TabGeneral casoId={id} detalleCaso={detalleCaso} />}
-        {pestañaActiva === 'documentos' && <TabDocumentos casoId={id} catalogos={catalogos} datosUsuario={datosUsuario} />}
-        {pestañaActiva === 'actividades' && <TabActividades casoId={detalleCaso.caso?.expediente_id} />}
-        {pestañaActiva === 'equipo' && <TabEquipo casoId={id} catalogos={catalogos} />}
+        {pestañaActiva === 'general' && <TabGeneral casoId={id} detalleCaso={detalleCaso} estaCerrado={estaCerrado} />}
+        {pestañaActiva === 'documentos' && <TabDocumentos casoId={id} catalogos={catalogos} datosUsuario={datosUsuario} estaCerrado={estaCerrado} />}
+        {pestañaActiva === 'actividades' && <TabActividades casoId={detalleCaso.caso?.expediente_id} estaCerrado={estaCerrado} />}
+        {pestañaActiva === 'equipo' && <TabEquipo casoId={id} catalogos={catalogos} estaCerrado={estaCerrado} />}
         {pestañaActiva === 'historial' && <TabHistorial historial={historialCaso} />}
       </div>
 
-        {/* ========================================== */}
+      {/* ========================================== */}
       {/* MODALES GLOBALES (HEADER)         */}
       {/* ========================================== */}
 
@@ -300,22 +340,22 @@ const handleDocCheckboxChange = (docId) => {
           <form onSubmit={handleGuardarEdicion} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <Label text="Título del Caso" />
-              <Input name="titulo" value={formData.titulo || ''} onChange={(e) => setFormData({...formData, titulo: e.target.value})} />
+              <Input name="titulo" value={formData.titulo || ''} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} />
             </div>
             <div>
               <Label text="Cliente" />
-              <select name="cliente" value={formData.cliente || ''} onChange={(e) => setFormData({...formData, cliente: e.target.value})} className="w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <select name="cliente" value={formData.cliente || ''} onChange={(e) => setFormData({ ...formData, cliente: e.target.value })} className="w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Seleccione...</option>
                 {catalogos?.clientes?.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </div>
             <div>
               <Label text="Contraparte" />
-              <Input name="contraparte" value={formData.contraparte || ''} onChange={(e) => setFormData({...formData, contraparte: e.target.value})} />
+              <Input name="contraparte" value={formData.contraparte || ''} onChange={(e) => setFormData({ ...formData, contraparte: e.target.value })} />
             </div>
             <div className="md:col-span-2">
               <Label text="Descripción" />
-              <textarea name="descripcion" value={formData.descripcion || ''} onChange={(e) => setFormData({...formData, descripcion: e.target.value})} className="w-full p-2 border rounded h-32 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500" />
+              <textarea name="descripcion" value={formData.descripcion || ''} onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })} className="w-full p-2 border rounded h-32 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancelar</button>
@@ -327,66 +367,66 @@ const handleDocCheckboxChange = (docId) => {
 
       {/* 2. Modal: Solicitar Revisión */}
       {isRevisionModalOpen && (
-  <Modal title="Solicitar Revisión de Documentos" onClose={() => setIsRevisionModalOpen(false)}>
-    <form onSubmit={handleSolicitarRevision}>
-      <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6 text-sm text-blue-800">
-        Selecciona los documentos específicos que requieren revisión. Si no seleccionas ninguno, se realizará una revisión general.
-      </div>
+        <Modal title="Solicitar Revisión de Documentos" onClose={() => setIsRevisionModalOpen(false)}>
+          <form onSubmit={handleSolicitarRevision}>
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6 text-sm text-blue-800">
+              Selecciona los documentos específicos que requieren revisión. Si no seleccionas ninguno, se realizará una revisión general.
+            </div>
 
-      <div className="mb-5">
-        <Label text="Seleccionar Revisor *" />
-        <select 
-          required 
-          value={revisionData.revisor_id} 
-          onChange={(e) => setRevisionData({ ...revisionData, revisor_id: e.target.value })} 
-          className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="">¿Quién revisará este caso?</option>
-          {catalogos?.usuarios?.map(user => (
-            <option key={user.id} value={user.id}>{user.nombre_completo}</option>
-          ))}
-        </select>
-      </div>
+            <div className="mb-5">
+              <Label text="Seleccionar Revisor *" />
+              <select
+                required
+                value={revisionData.revisor_id}
+                onChange={(e) => setRevisionData({ ...revisionData, revisor_id: e.target.value })}
+                className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">¿Quién revisará este caso?</option>
+                {catalogos?.usuarios?.map(user => (
+                  <option key={user.id} value={user.id}>{user.nombre_completo}</option>
+                ))}
+              </select>
+            </div>
 
-      {/* LISTA DE SELECCIÓN DE DOCUMENTOS */}
-      <div className="mb-6">
-        <Label text="Documentos para Revisión" />
-        <div className="border rounded-lg max-h-48 overflow-y-auto bg-gray-50/30 p-2 mt-1">
-          {listaDocumentos.length === 0 ? (
-            <p className="text-xs text-gray-500 text-center py-4">No hay documentos cargados en este caso.</p>
-          ) : (
-            listaDocumentos.map(doc => (
-              <label key={doc.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-gray-200">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                  checked={revisionData.documentos_ids.includes(doc.id)}
-                  onChange={() => handleDocCheckboxChange(doc.id)}
-                />
-                <span className="text-sm font-bold text-gray-700 truncate">{doc.nombre}</span>
-              </label>
-            ))
-          )}
-        </div>
-      </div>
+            {/* LISTA DE SELECCIÓN DE DOCUMENTOS */}
+            <div className="mb-6">
+              <Label text="Documentos para Revisión" />
+              <div className="border rounded-lg max-h-48 overflow-y-auto bg-gray-50/30 p-2 mt-1">
+                {listaDocumentos.length === 0 ? (
+                  <p className="text-xs text-gray-500 text-center py-4">No hay documentos cargados en este caso.</p>
+                ) : (
+                  listaDocumentos.map(doc => (
+                    <label key={doc.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-gray-200">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        checked={revisionData.documentos_ids.includes(doc.id)}
+                        onChange={() => handleDocCheckboxChange(doc.id)}
+                      />
+                      <span className="text-sm font-bold text-gray-700 truncate">{doc.nombre}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
 
-      <div className="mb-6">
-        <Label text="Instrucciones adicionales" />
-        <textarea 
-          value={revisionData.comentarios_solicitud} 
-          onChange={(e) => setRevisionData({ ...revisionData, comentarios_solicitud: e.target.value })} 
-          className="w-full p-3 border rounded-lg text-sm resize-none h-24 focus:ring-2 focus:ring-blue-500 outline-none" 
-          placeholder="Ej: Revisar especialmente la cláusula de rescisión..." 
-        />
-      </div>
+            <div className="mb-6">
+              <Label text="Instrucciones adicionales" />
+              <textarea
+                value={revisionData.comentarios_solicitud}
+                onChange={(e) => setRevisionData({ ...revisionData, comentarios_solicitud: e.target.value })}
+                className="w-full p-3 border rounded-lg text-sm resize-none h-24 focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Ej: Revisar especialmente la cláusula de rescisión..."
+              />
+            </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-        <button type="button" onClick={() => setIsRevisionModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-        <button type="submit" className="px-6 py-2 bg-[#080E21] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition">Enviar Solicitud</button>
-      </div>
-    </form>
-  </Modal>
-)}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button type="button" onClick={() => setIsRevisionModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
+              <button type="submit" className="px-6 py-2 bg-[#080E21] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition">Enviar Solicitud</button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* 3. Modal: Atender Revisión (Jefe/Revisor) */}
       {isEvaluarModalOpen && (
@@ -430,6 +470,52 @@ const handleDocCheckboxChange = (docId) => {
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsEvaluarModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 transition">Cancelar</button>
               <button type="submit" disabled={!evaluacionData.estado_revision_id} className={`px-6 py-2 text-white font-bold rounded-lg shadow-md transition disabled:bg-gray-300 disabled:cursor-not-allowed ${evaluacionData.estado_revision_id === 3 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}>Confirmar Evaluación</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {/* 4. Modal: Confirmar Cierre de Caso */}
+      {isCerrarModalOpen && (
+        <Modal title="Cerrar Expediente" onClose={() => setIsCerrarModalOpen(false)}>
+          <form onSubmit={handleCerrarCaso}>
+            {/* Cuadro de advertencia llamativo pero elegante */}
+            <div className="bg-red-50 border-l-4 border-red-500 p-5 rounded-r-xl mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-red-500 text-2xl leading-none">⚠️</span>
+                <div>
+                  <h3 className="text-red-800 font-bold text-sm mb-1">Acción Definitiva</h3>
+                  <p className="text-red-700 text-xs leading-relaxed">
+                    Estás a punto de dar por finalizado este expediente. Esta acción cambiará el estado a <strong>"Cerrado"</strong> y quedará archivado en el historial. ¿Estás absolutamente seguro de que deseas proceder?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button 
+                type="button" 
+                onClick={() => setIsCerrarModalOpen(false)} 
+                disabled={cargandoCierre}
+                className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                disabled={cargandoCierre}
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md transition disabled:bg-red-400 flex items-center gap-2"
+              >
+                {cargandoCierre ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Cerrando...
+                  </>
+                ) : (
+                  <>
+                    <span>🔒</span> Sí, Cerrar Caso
+                  </>
+                )}
+              </button>
             </div>
           </form>
         </Modal>

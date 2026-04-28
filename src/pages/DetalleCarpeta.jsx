@@ -38,7 +38,7 @@ const DetalleCarpeta = () => {
     try {
       setCargando(true);
       const data = await carpetasService.obtenerDetalleCarpeta(id);
-      setCarpeta(data.carpeta || { nombre_carpeta: 'Carpeta' });
+      setCarpeta(data.nombre_carpeta);
       setDocumentos(data.documentos || []);
     } catch (error) {
       console.error("Error al cargar la carpeta:", error);
@@ -112,7 +112,8 @@ const DetalleCarpeta = () => {
       alert("Error al vincular el documento: " + error);
     }
   };
-
+  
+  /* -------------- SE QUITO POR SOLICITUD DEL CLIENTE --------------
   // --- D. ELIMINAR DOCUMENTO ---
   const handleEliminar = async (docId) => {
     if (!window.confirm("¿Eliminar este documento de la carpeta?")) return;
@@ -123,7 +124,7 @@ const DetalleCarpeta = () => {
       alert("Error al eliminar: " + error);
     }
   };
-
+*/
 
 const handleDescargarDocumento = async (ruta) => {
     if (!ruta) return alert("Ruta no válida");
@@ -260,7 +261,7 @@ const handleDescargarDocumento = async (ruta) => {
 
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-black text-[#080E21] flex items-center gap-3">
-          <span className="text-4xl">📂</span> {carpeta.nombre_carpeta}
+          <span className="text-4xl">📂</span> {carpeta}
         </h1>
         <div className="flex gap-3">
           <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-gray-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2">
@@ -284,19 +285,18 @@ const handleDescargarDocumento = async (ruta) => {
             <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b border-gray-200">
               <tr>
                 <th className="p-4">Nombre del Archivo</th>
-                <th className="p-4">Fecha Subida</th>
+                <th className="p-4">Ultima Modificacion</th>
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {console.log(documentos)}
               {documentos.map((doc) => (
                 <tr key={doc.id} className="hover:bg-blue-50/30 transition group">
                   <td className="p-4 flex items-center gap-3">
                     <span className="text-2xl">{getFileIcon(doc.nombre)}</span>
                     <span className="font-bold text-gray-800">{doc.nombre}</span>
                   </td>
-                  <td className="p-4 text-sm text-gray-500">{new Date(doc.fecha_subida).toLocaleDateString()}</td>
+                  <td className="p-4 text-sm text-gray-500">{new Date(doc.fecha_modificacion).toLocaleDateString()}</td>
 
                   <td className="p-4 text-right space-x-4">
                     {/* NUEVO BOTÓN: EDITOR ONLINE */}
@@ -324,10 +324,10 @@ const handleDescargarDocumento = async (ruta) => {
                       Vincular a Caso
                     </button>
 
-                    {/* Botón Eliminar */}
+                    {/* --- SE QUITO BOTON PARA ELIMINACION POR SOLICTUD DEL CLIENTE-----
                     <button onClick={() => handleEliminar(doc.documento_id)} className="text-red-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline">
                       Eliminar
-                    </button>
+                    </button>*/}
                   </td>
                 </tr>
               ))}
@@ -477,6 +477,7 @@ const handleDescargarDocumento = async (ruta) => {
                 >
                   <option value="word">Documento de Word (.docx)</option>
                   <option value="excel">Hoja de Cálculo (.xlsx)</option>
+                  <option value="powerpoint">Presentacion PowerPoint (.pptx)</option>
                 </select>
               </div>
 

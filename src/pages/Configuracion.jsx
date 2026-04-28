@@ -12,10 +12,6 @@ const Configuracion = () => {
 
   return (
     <main className="p-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-[#080E21]">Configuración del Sistema</h1>
-        <p className="text-gray-600 mt-1">Administra usuarios, roles, catálogos y preferencias de la firma.</p>
-      </div>
 
       {/* Menú de Pestañas (Tabs) */}
       <div className="border-b border-gray-200 mb-8 flex gap-4 overflow-x-auto">

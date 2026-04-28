@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import docsService from '../../services/docsService';
 import { EmptyState, Modal, Label } from '../ui/ComponentesGenerales';
 
-const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
+const TabDocumentos = ({ casoId, catalogos, datosUsuario, estaCerrado }) => {
   const [documentos, setDocumentos] = useState({ documentacion: [] });
   const [cargando, setCargando] = useState(true);
 
@@ -64,21 +64,21 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
       const fileBlob = await docsService.descargarDocumento(ruta);
       const fileURL = URL.createObjectURL(fileBlob);
       const link = document.createElement('a');
-      link.href = fileURL;  
-      link.download = ruta.replace(/\\/g, '/').split('/').pop(); 
+      link.href = fileURL;
+      link.download = ruta.replace(/\\/g, '/').split('/').pop();
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(fileURL), 10000);
     } catch (error) { alert("Error al intentar descargar el archivo: " + error); }
   };
-
-  const handleEliminarDocumento = async (docId) => {
-    if (!window.confirm("¿Eliminar este documento?")) return;
-    await docsService.eliminarDocumentoCaso(docId);
-    await cargarDocumentos();
-  };
-
+  /* --------------- SE QUITO POR SOLICITUD DEL CLIENTTE ---------------
+    const handleEliminarDocumento = async (docId) => {
+      if (!window.confirm("¿Eliminar este documento?")) return;
+      await docsService.eliminarDocumentoCaso(docId);
+      await cargarDocumentos();
+    };
+  */
   // --- LÓGICA DE NUEVA VERSIÓN ---
   const abrirModalModificar = (doc) => {
     setDocAModificar(doc);
@@ -98,13 +98,13 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
       setIsModificarModalOpen(false);
       alert("Nueva versión subida correctamente.");
       await cargarDocumentos();
-    } catch (error) { alert("Error al subir la nueva versión"); }
+    } catch (error) { alert("Error al subir la nueva versión: " + error); }
   };
 
   // --- LÓGICA ONLINE (WOPI) ---
   const esEditableOnline = (extension) => {
     const ext = extension?.toLowerCase().replace('.', '') || '';
-    return ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext);
+    return ['doc', 'docx', 'xls', 'xlsx', 'xlsm', 'ppt', 'pptx'].includes(ext);
   };
 
   const handleAbrirOnline = (docId) => {
@@ -123,13 +123,13 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
       if (window.confirm("Documento creado. ¿Abrir el editor ahora?")) {
         handleAbrirOnline(res.documentacion?.id || res.id);
       }
-    } catch (error) { alert("Error al crear el documento."); }
+    } catch (error) { alert("Error al crear el documento: " + error); }
   };
 
   // --- HELPERS ---
   const getFileIcon = (extension) => {
     const ext = extension?.toLowerCase().replace('.', '') || '';
-    const iconos = { pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', ppt: '📙', pptx: '📙', txt: '📝', jpg: '🖼️', png: '🖼️', zip: '🗂️' };
+    const iconos = { pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', xlsm: '📗', ppt: '📙', pptx: '📙', txt: '📝', jpg: '🖼️', png: '🖼️', zip: '🗂️' };
     return iconos[ext] || '📄';
   };
 
@@ -139,10 +139,12 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
     <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold">Documentos del Expediente</h3>
-        <div className="flex gap-3">
-          <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ Doc en Blanco</button>
-          <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#0F172A] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">+ Subir Documento</button>
-        </div>
+        {!estaCerrado && (
+          <div className="flex gap-3">
+            <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ Doc en Blanco</button>
+            <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#0F172A] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">+ Subir Documento</button>
+          </div>
+        )}
       </div>
 
       {!documentos.documentacion?.length ? (
@@ -153,32 +155,57 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
             <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
               <tr>
                 <th className="p-4">Nombre</th>
-                <th className="p-4">Tipo</th>
-                <th className="p-4">Subido por</th>
+                <th className="p-4">Ultima modificacion</th>
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {documentos.documentacion.map((doc) => (
-                <tr key={doc.id} className="hover:bg-blue-50/30 group transition-colors">
+                <tr
+                  key={doc.id}
+                  className={`group transition-colors border-l-4 ${doc.solicitud_revision
+                      ? 'bg-orange-50 hover:bg-orange-100 border-orange-400'
+                      : 'hover:bg-blue-50/30 border-transparent'
+                    }`}
+                >
                   <td className="p-4 flex items-center gap-3">
                     <span className="text-xl">{getFileIcon(doc.extension)}</span>
                     <div>
-                      <p className="text-sm font-bold">{doc.nombre}</p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-sm font-bold ${doc.solicitud_revision ? 'text-orange-900' : 'text-gray-800'}`}>
+                          {doc.nombre}
+                        </p>
+                        {/* Etiqueta visual si está en revisión */}
+                        {doc.solicitud_revision && (
+                          <span className="bg-orange-200 text-orange-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                            En Revisión
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400">{doc.pesomb} MB</p>
                     </div>
                   </td>
-                  <td className="p-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{doc.tipo_documento}</span></td>
-                  <td className="p-4 text-sm text-gray-500">{doc.responsable}</td>
+                  <td className="p-4 text-gray-600">
+                    {doc.fecha_modificacion}
+                  </td>
                   <td className="p-4 text-right">
-                    {esEditableOnline(doc.extension) && (
-                      <button onClick={() => handleAbrirOnline(doc.id)} className="text-green-600 hover:text-green-800 font-bold text-xs mr-4 transition inline-flex items-center gap-1">
-                        <span>📝</span> Abrir Editor
-                      </button>
+                    <button onClick={() => handleDescargarDocumento(doc.url_archivo)} className="text-blue-600 hover:text-blue-800 font-bold text-xs mr-4">
+                      Descargar
+                    </button>
+                    {!estaCerrado && (
+                      <>
+                        {esEditableOnline(doc.extension) && (
+                          <button onClick={() => handleAbrirOnline(doc.id)} className="text-green-600 hover:text-green-800 font-bold text-xs mr-4 transition inline-flex items-center gap-1">
+                            <span>📝</span> Abrir Editor
+                          </button>
+                        )}
+
+                        <button onClick={() => abrirModalModificar(doc)} className="text-yellow-600 hover:text-yellow-800 font-bold text-xs mr-4 transition-colors">
+                          Modificar
+                        </button>
+                        {/*<button onClick={() => handleEliminarDocumento(doc.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs">Eliminar</button>*/}
+                      </>
                     )}
-                    <button onClick={() => handleDescargarDocumento(doc.url_archivo)} className="text-blue-600 hover:text-blue-800 font-bold text-xs mr-4">Descargar</button>
-                    <button onClick={() => abrirModalModificar(doc)} className="text-yellow-600 hover:text-yellow-800 font-bold text-xs mr-4 transition-colors">Modificar</button>
-                    <button onClick={() => handleEliminarDocumento(doc.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs">Eliminar</button>
                   </td>
                 </tr>
               ))}
@@ -220,23 +247,15 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario }) => {
             </div>
             <div className="mb-4">
               <Label text="Nombre del Archivo *" />
-              <input required type="text" value={nuevoDocData.nombreArchivo} onChange={(e) => setNuevoDocData({...nuevoDocData, nombreArchivo: e.target.value})} className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <input required type="text" value={nuevoDocData.nombreArchivo} onChange={(e) => setNuevoDocData({ ...nuevoDocData, nombreArchivo: e.target.value })} className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <Label text="Formato (Plantilla) *" />
-                <select value={nuevoDocData.tipoPlantilla} onChange={(e) => setNuevoDocData({...nuevoDocData, tipoPlantilla: e.target.value})} className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="word">Word (.docx)</option>
-                  <option value="excel">Excel (.xlsx)</option>
-                </select>
-              </div>
-              <div>
-                <Label text="Categoría del Documento *" />
-                <select required value={nuevoDocData.tipoDocumento} onChange={(e) => setNuevoDocData({...nuevoDocData, tipoDocumento: e.target.value})} className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seleccione...</option>
-                  {catalogos?.catalogos?.tipos_documento?.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                </select>
-              </div>
+            <div>
+              <Label text="Formato (Plantilla) *" />
+              <select value={nuevoDocData.tipoPlantilla} onChange={(e) => setNuevoDocData({ ...nuevoDocData, tipoPlantilla: e.target.value })} className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="word">Word (.docx)</option>
+                <option value="excel">Excel (.xlsx)</option>
+                <option value="powerpoint">PowerPoint (.pptx)</option>
+              </select>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsCrearDocOpen(false)} className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100">Cancelar</button>

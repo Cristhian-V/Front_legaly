@@ -20,8 +20,7 @@ const obtenerCarpetas = async () => {
 const crearCarpeta = async (nombre) => {
   try {
     const response = await axios.post(`${API_URL}/carpetas`,
-      { nombre_carpeta: nombre },
-      { withCredentials: true }
+      { nombre_carpeta: nombre }
     );
     return response.data;
   } catch (error) {
@@ -34,8 +33,7 @@ const renombrarCarpeta = async (id, nuevoNombre) => {
   try {
     // Nota: Usamos 'nuevo_nombre' tal como lo pide tu backend
     const response = await axios.put(`${API_URL}/carpetas/${id}`,
-      { nuevo_nombre: nuevoNombre },
-      { withCredentials: true }
+      { nuevo_nombre: nuevoNombre }
     );
     return response.data;
   } catch (error) {
@@ -60,7 +58,7 @@ const eliminarCarpeta = async (id) => {
 const obtenerDetalleCarpeta = async (carpetaId) => {
   try {
     // Asumo que tienes una ruta GET como esta para listar el contenido
-    const response = await axios.get(`${API_URL}/carpetas/${carpetaId}`, { withCredentials: true });
+    const response = await axios.get(`${API_URL}/carpetas/${carpetaId}`);
     return response.data;
   } catch (error) {
     console.error('Error al obtener detalle de carpeta:', error);
@@ -72,7 +70,6 @@ const obtenerDetalleCarpeta = async (carpetaId) => {
 const subirDocumento = async (carpetaId, formData) => {
   try {
     const response = await axios.post(`${API_URL}/carpetas/${carpetaId}/documentos`, formData, {
-      withCredentials: true,
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;
@@ -88,8 +85,7 @@ const subirDocumento = async (carpetaId, formData) => {
 const compartirDocumento = async (docId, usuariosIds) => {
   try {
     const response = await axios.post(`${API_URL}/documentos/${docId}/compartir`,
-      { usuarios_ids: usuariosIds },
-      { withCredentials: true }
+      { usuarios_ids: usuariosIds }
     );
     return response.data;
   } catch (error) {
@@ -102,8 +98,7 @@ const compartirDocumento = async (docId, usuariosIds) => {
 const vincularACaso = async (docId, casoId, tipoDocumentoId) => {
   try {
     const response = await axios.post(`${API_URL}/documentos/${docId}/vincular-caso`,
-      { caso_id: casoId, tipo_documento_id: tipoDocumentoId },
-      { withCredentials: true }
+      { caso_id: casoId, tipo_documento_id: tipoDocumentoId }
     );
     return response.data;
   } catch (error) {
@@ -115,7 +110,7 @@ const vincularACaso = async (docId, casoId, tipoDocumentoId) => {
 // D. Eliminar Documento
 const eliminarDocumento = async (docId) => {
   try {
-    const response = await axios.delete(`${API_URL}/documentos/${docId}`, { withCredentials: true });
+    const response = await axios.delete(`${API_URL}/documentos/${docId}`);
     return response.data;
   } catch (error) {
     console.error('Error al eliminar documento:', error);
@@ -144,9 +139,7 @@ const descargarDocumento = async (rutaArchivo) => {
 const crearDocumentoBlanco = async (carpetaId, data) => {
   try {
     // 'data' es un objeto que debe contener: { nombreArchivo, tipoPlantilla }
-    const response = await axios.post(`${API_URL}/carpetas/${carpetaId}/documentos/blanco`, data, {
-      withCredentials: true // Fundamental para que pase el 'verifyToken'
-    });
+    const response = await axios.post(`${API_URL}/carpetas/${carpetaId}/documentos/blanco`, data);
     return response.data;
   } catch (error) {
     console.error('Error al obtener blob de documento:', error);

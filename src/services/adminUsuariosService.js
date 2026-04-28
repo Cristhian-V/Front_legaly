@@ -31,13 +31,15 @@ const crearUsuario = async (usuarioData) => {
   }
 }
 
+
 const modificarUsuario = async (id, usuarioData) => {
   try {
     const response = await axios.put(`${API_URL}/mod/${id}`, {
       name_user: usuarioData.name_user,
       nombre_completo: usuarioData.nombre_completo,
       email: usuarioData.email,
-      rol_usuario: usuarioData.rol_id,
+      rol_usuario: +usuarioData.rol_usuario,
+      password: usuarioData.password,
       telefono: usuarioData.telefono,
       biografia: usuarioData.biografia,
       avatar_url: usuarioData.avatar_url,

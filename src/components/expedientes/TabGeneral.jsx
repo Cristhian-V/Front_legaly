@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import casosService from '../../services/casosService';
 import { InfoBox, Modal } from '../ui/ComponentesGenerales';
 
-const TabGeneral = ({ casoId, detalleCaso }) => {
+const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
   const [contactosAsignados, setContactosAsignados] = useState([]);
   const [contactosDisponibles, setContactosDisponibles] = useState([]);
   const [contactosSeleccionados, setContactosSeleccionados] = useState([]);
@@ -24,7 +24,7 @@ const TabGeneral = ({ casoId, detalleCaso }) => {
       setContactosDisponibles(disponibles || []);
       setContactosSeleccionados([]);
       setIsContactosModalOpen(true);
-    } catch (error) { alert("Error al cargar los contactos."); }
+    } catch (error) { alert("Error al cargar los contactos: " + error); }
   };
 
   const handleToggleContacto = (contactoId) => {
@@ -39,7 +39,7 @@ const TabGeneral = ({ casoId, detalleCaso }) => {
       const resContactos = await casosService.obtenerContactosAsignados(casoId);
       setContactosAsignados(resContactos || []);
       setIsContactosModalOpen(false);
-    } catch (error) { alert("Error al asignar contactos."); }
+    } catch (error) { alert("Error al asignar contactos: "+ error); }
   };
 
   const handleQuitarContacto = async (contactoId, nombreContacto) => {
@@ -48,7 +48,7 @@ const TabGeneral = ({ casoId, detalleCaso }) => {
       await casosService.quitarContacto(detalleCaso.caso?.id, contactoId); // Usamos el ID interno
       const resContactos = await casosService.obtenerContactosAsignados(casoId);
       setContactosAsignados(resContactos || []);
-    } catch (error) { alert("Error al desvincular."); }
+    } catch (error) { alert("Error al desvincular: "+ error); }
   };
 
   return (
@@ -70,14 +70,18 @@ const TabGeneral = ({ casoId, detalleCaso }) => {
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm h-fit">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-[#080E21]">Contactos del Cliente</h3>
+          {!estaCerrado && (
           <button onClick={abrirModalContactos} className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors">+ Añadir</button>
+          )}
         </div>
 
         <div className="space-y-4">
           {contactosAsignados.length > 0 ? (
             contactosAsignados.map((contacto) => (
               <div key={`contacto-${contacto.id}`} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 relative group transition-colors hover:bg-white hover:shadow-sm">
+                {!estaCerrado && (
                 <button onClick={() => handleQuitarContacto(contacto.id, contacto.nombre_contacto)} className="absolute top-2 right-2 text-[10px] text-gray-400 hover:text-red-600 bg-gray-100 hover:bg-red-50 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">✕</button>
+                )}
                 <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold flex-shrink-0">
                   {contacto.nombre_contacto?.charAt(0).toUpperCase()}
                 </div>

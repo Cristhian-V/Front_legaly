@@ -6,7 +6,7 @@ const TabUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const { catalogos } = useOutletContext();
+  const { catalogos, datosUsuario } = useOutletContext();
 
   // --- ESTADOS DEL MODAL ---
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,9 +28,9 @@ const TabUsuarios = () => {
   const cargarUsuarios = async () => {
     try {
       setCargando(true);
-      const data = await adminUsuariosService.obtenerUsuarios();      
+      const data = await adminUsuariosService.obtenerUsuarios();
       setUsuarios(data.user || data || []); // Ajusta según la respuesta exacta de tu GET /data
-      
+
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
     } finally {
@@ -57,10 +57,10 @@ const TabUsuarios = () => {
     setFormData({
       id: usuario.id,
       nombre_completo: usuario.nombre_completo || '',
-      name_user: usuario.name_user || '',
+      name_user: usuario.nombre_usuario || '',
       email: usuario.email || '',
       password: '', // No lo enviamos en el PUT
-      rol_usuario: usuario.rol_usuario || '',
+      rol_usuario: usuario.rol_id || '',
       telefono: usuario.telefono || '',
       biografia: usuario.biografia || '',
       avatar_url: usuario.avatar_url || '',
@@ -81,7 +81,7 @@ const TabUsuarios = () => {
         await adminUsuariosService.crearUsuario(formData);
       } else {
         // No enviamos el password al editar, extraemos el ID
-        const { id, password, ...datosAEditar } = formData;
+        const { id, ...datosAEditar } = formData;
         await adminUsuariosService.modificarUsuario(id, datosAEditar);
       }
       await cargarUsuarios();
@@ -92,7 +92,7 @@ const TabUsuarios = () => {
       console.error(error);
     }
   };
-    const handleInputChange = (e) => {
+  const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -177,9 +177,14 @@ const TabUsuarios = () => {
                   <button onClick={() => abrirModalEditar(user)} className="text-blue-600 font-bold text-xs hover:underline mr-4">
                     Editar
                   </button>
-                  <button onClick={() => handleEliminar(user.id, user.nombre_completo)} className="text-red-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline">
-                    Eliminar
-                  </button>
+                  {datosUsuario?.rol_id === 5 && (
+                    <button
+                      onClick={() => handleEliminar(user.id, user.nombre_completo)}
+                      className="text-red-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -192,68 +197,84 @@ const TabUsuarios = () => {
 
       {/* MODAL CREAR / EDITAR USUARIO */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
-            <div className="bg-[#080E21] p-4 flex justify-between items-center">
-              <h2 className="text-white font-bold">
-                {modalMode === 'crear' ? 'Registrar Nuevo Usuario' : 'Editar Datos de Usuario'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-white text-xl leading-none">&times;</button>
+        <form onSubmit={handleGuardar} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+            {/* 1. Nombre Completo (Siempre Obligatorio) */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1">Nombre Completo *</label>
+              <input required name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
 
-            <form onSubmit={handleGuardar} className="p-6">
+            {/* 2. Nombre de Usuario (Siempre Obligatorio) */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1">Nombre de Usuario (Login) *</label>
+              <input required name="name_user" value={formData.name_user} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Nombre Completo *</label>
-                  <input required name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Nombre de Usuario (Login) *</label>
-                  <input required name="name_user" value={formData.name_user} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Correo Electrónico *</label>
-                  <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Teléfono</label>
-                  <input name="telefono" value={formData.telefono} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
+            {/* 3. Correo (Siempre Obligatorio) */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1">Correo Electrónico *</label>
+              <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
 
-                {/* LA CONTRASEÑA SOLO SE PIDE AL CREAR */}
-                {modalMode === 'crear' && (
-                  <div>
-                    <label className="text-xs font-bold text-gray-700 block mb-1">Contraseña Temporal *</label>
-                    <input required type="password" name="password" value={formData.password} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                  </div>
-                )}
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Rol en el Sistema *</label>
-                  <select name="rol_id" required value={formData.rol_id} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">Asignar a...</option>
-                    {catalogos?.catalogos?.roles_usuario.map((rol, i) => (
-                      <option key={i} value={rol.id}>{rol.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+            {/* 4. Rol (Siempre Obligatorio) */}
+            <div>
+              {console.log(formData)}
+              <label className="text-xs font-bold text-gray-700 block mb-1">Rol en el Sistema *</label>
+              <select name="rol_usuario" required value={formData.rol_usuario} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">Asignar a...</option>
+                {catalogos?.catalogos?.roles_usuario?.map((rol, i) => (
+                  <option key={i} value={rol.id}>{rol.nombre}</option>
+                ))}
+              </select>
+            </div>
 
-              <div className="mb-6">
-                <label className="text-xs font-bold text-gray-700 block mb-1">Biografía / Notas</label>
-                <textarea name="biografia" value={formData.biografia} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20" placeholder="Información adicional del colega..."></textarea>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition">
-                  {modalMode === 'crear' ? 'Registrar Usuario' : 'Guardar Cambios'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1">Contraseña *</label>
+              <input required={modalMode === 'crear'} type="password" name="password" value={formData.password} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
 
+
+            {/* 6. Teléfono (Obligatorio SOLO al editar) */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1">
+                Teléfono {modalMode === 'editar' && '*'}
+              </label>
+              <input required={modalMode === 'editar'} name="telefono" value={formData.telefono} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+
+            {/* 7. Grado Académico (Obligatorio SOLO al editar) */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1">
+                Grado Académico {modalMode === 'editar' && '*'}
+              </label>
+              <select required={modalMode === 'editar'} name="grado_id" value={formData.grado_id} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">Seleccionar...</option>
+                {catalogos?.catalogos?.grados_academicos?.map((grado, i) => (
+                  <option key={i} value={grado.id}>{grado.nombre}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+
+          {/* 8. Biografía (Obligatorio SOLO al editar) */}
+          <div className="mb-6">
+            <label className="text-xs font-bold text-gray-700 block mb-1">
+              Biografía / Notas {modalMode === 'editar' && '*'}
+            </label>
+            <textarea required={modalMode === 'editar'} name="biografia" value={formData.biografia} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20" placeholder="Información adicional del colega..."></textarea>
+          </div>
+
+          {/* BOTONES */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
+            <button type="submit" className="px-6 py-2 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition">
+              {modalMode === 'crear' ? 'Registrar Usuario' : 'Guardar Cambios'}
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

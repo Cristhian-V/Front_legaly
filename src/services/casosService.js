@@ -5,9 +5,14 @@ axios.defaults.withCredentials = true;
 // Definimos la URL base de tu backend
 const API_URL = `${import.meta.env.VITE_API_URL}/casos`;
 
-const obtenerCasos = async () => {
+const obtenerCasos = async (tipo = "activos") => {
   try {
-    const response = await axios.get(`${API_URL}/`);
+    // Enviamos el parámetro tipo como query string (?tipo=activos o ?tipo=historial)
+    const response = await axios.get(`${API_URL}/`, {
+      params: {
+        tipo: tipo,
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("Error al obtener los casos:", error);
@@ -32,6 +37,17 @@ const crearCaso = async (casoData) => {
     throw error;
   }
 };
+
+// --- CERRAR CASO ---
+const cerrarCaso = async (expedienteId) => {
+    try {
+      const response = await axios.put(`${API_URL}/${expedienteId}/cerrar`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al cerrar el caso:", error);
+      throw error;
+    }
+  }
 
 const obtenerDetalleCaso = async (expediente_id) => {
   try {
@@ -84,11 +100,11 @@ const obtenerEquipoCaso = async (expediente_id) => {
   }
 };
 
-const addMiembroEquipo = async (expediente_id, abogado_id) => {
+const addMiembroEquipo = async (expediente_id, abogados_ids) => {
   try {
     const response = await axios.post(`${API_URL}/equipo`, {
       expediente_id,
-      usuario_id: abogado_id,
+      usuarios_ids: abogados_ids,
     });
     return response.data;
   } catch (error) {
@@ -267,6 +283,7 @@ const casosService = {
   asignarContactos,
   quitarContacto,
   cancelarRevision,
+  cerrarCaso
 };
 
 export default casosService;
