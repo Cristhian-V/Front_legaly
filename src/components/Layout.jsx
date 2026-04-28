@@ -175,7 +175,7 @@ const Layout = () => {
 
         {/* AQUÍ SE INYECTA EL CONTENIDO DINÁMICO (Inicio o Expedientes) */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          <Outlet context={{ datosUsuario, catalogos , casosPendientes, recargarCatalogos: cargarCatalogos}} />
+          <Outlet context={{ datosUsuario, catalogos , casosPendientes, recargarCatalogos: cargarCatalogos, setCasosPendientes:setCasosPendientes}} />
         </div>
       </div>
     </div>
