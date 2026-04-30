@@ -38,13 +38,6 @@ const Carpetas = () => {
     setIsModalOpen(true);
   };
 
-  const abrirModalEditar = (carpeta, e) => {
-    e.stopPropagation(); // Evita que se dispare el click de "entrar a la carpeta"
-    setModalMode('editar');
-    setCarpetaForm({ id: carpeta.id, nombre: carpeta.nombre_carpeta });
-    setIsModalOpen(true);
-  };
-
   const handleGuardar = async (e) => {
     e.preventDefault();
     if (!carpetaForm.nombre.trim()) return alert("El nombre no puede estar vacío");
@@ -62,17 +55,6 @@ const Carpetas = () => {
     }
   };
 
-  const handleEliminar = async (id, nombre, e) => {
-    e.stopPropagation(); // Evita navegar al hacer clic en eliminar
-    if (!window.confirm(`¿Seguro que deseas eliminar la carpeta "${nombre}" y todo su contenido?`)) return;
-
-    try {
-      await carpetasService.eliminarCarpeta(id);
-      await cargarCarpetas();
-    } catch (error) {
-      alert("Error al eliminar la carpeta:" + error.message);
-    }
-  };
 
   // Filtrado de búsqueda
   const carpetasFiltradas = carpetas.filter(c =>
@@ -128,25 +110,7 @@ const Carpetas = () => {
               <div className="flex justify-between items-start">
                 <span className="text-4xl">📁</span>
 
-                {/* Menú de acciones invisible hasta hacer hover */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                  <button
-                    onClick={(e) => abrirModalEditar(carpeta, e)}
-                    className="p-1.5 bg-gray-50 hover:bg-blue-50 text-blue-600 rounded-lg transition"
-                    title="Renombrar"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={(e) => handleEliminar(carpeta.id, carpeta.nombre_carpeta, e)}
-                    className="p-1.5 bg-gray-50 hover:bg-red-50 text-red-600 rounded-lg transition"
-                    title="Eliminar"
-                  >
-                    🗑️
-                  </button>
-                </div>
               </div>
-
               <div>
                 <h3 className="font-bold text-[#080E21] line-clamp-2 leading-tight">
                   {carpeta.nombre_carpeta}

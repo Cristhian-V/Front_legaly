@@ -22,7 +22,8 @@ const crearUsuario = async (usuarioData) => {
       nombre_completo: usuarioData.nombre_completo,
       email: usuarioData.email,
       password: usuarioData.password,
-      rol_usuario: usuarioData.rol_usuario
+      rol_usuario: usuarioData.rol_usuario,
+      grado_id: usuarioData.grado_id
     });
     return response.data;
   } catch (error) {

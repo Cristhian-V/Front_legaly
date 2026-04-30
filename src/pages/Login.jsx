@@ -96,20 +96,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* 5. Leyenda para recuperar contraseña */}
-          <div className="mt-8 border-t border-gray-200 pt-6 text-center">
-            <p className="text-sm text-gray-600">
-              ¿Tienes problemas para acceder? <br />
-              <button 
-                type="button"
-                className="text-blue-600 hover:text-blue-800 font-semibold transition-colors mt-1"
-                onClick={() => alert("Función de recuperación en desarrollo")}
-              >
-                Recuperar contraseña
-              </button>
-            </p>
-          </div>
-
         </div>
       </div>
     </div>

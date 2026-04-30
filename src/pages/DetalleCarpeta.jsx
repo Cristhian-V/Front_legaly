@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import carpetasService from '../services/carpetasService';
+import wopiDocServices from '../services/wopiDocService';
 
 const DetalleCarpeta = () => {
   const { id } = useParams();
@@ -173,7 +174,7 @@ const handleDescargarDocumento = async (ruta) => {
   const handleAbrirOnline = (docId) => {
     // IMPORTANTE: Asegúrate de que esta URL apunte al endpoint WOPI de documentos sueltos 
     // que creamos en el backend (api/docs-sueltos/documentos/.../wopi)
-    const wopiUrl = `https://office.cumbre.com.bo/browser/dist/cool.html?WOPISrc=https://api.cumbre.com.bo/api/docsueltos/files/${docId}`;
+    const wopiUrl = wopiDocServices.wopiURLDocSueltos(docId);
     window.open(wopiUrl, '_blank');
   };
 
@@ -206,8 +207,7 @@ const handleDescargarDocumento = async (ruta) => {
   // Función para obtener el emoji según la extensión del archivo
   const getFileIcon = (extension) => {
     // Limpiamos la extensión: la pasamos a minúsculas y le quitamos el punto si lo tiene
-    const ext = extension?.toLowerCase().replace('.', '') || '';
-
+    const ext = extension?.split('.').pop()
     const iconos = {
       // Documentos PDF
       pdf: '📕',

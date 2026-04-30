@@ -62,7 +62,8 @@ const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
           <InfoBox label="Cliente" value={detalleCaso.caso?.nombre_cliente} />
           <InfoBox label="Contraparte" value={detalleCaso.caso?.contraparte || 'No especificada'} />
           <InfoBox label="Fecha Inicio" value={detalleCaso.caso?.fecha_inicio} />
-          <InfoBox label="Vencimiento" value="Próximamente" color="text-red-500" />
+          {console.log(detalleCaso.caso)}
+          <InfoBox label="Vencimiento" value={detalleCaso.caso?.fecha_cierre} color="text-red-500" />
         </div>
       </div>
 

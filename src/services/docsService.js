@@ -27,7 +27,7 @@ const subirDocumentoCaso = async (formData) => {
   try {
     const response = await axios.post(`${API_URL}/${formData.get('expediente_id')}/documentacion`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data', // MUY IMPORTANTE PARA ARCHIVOS
+        'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;

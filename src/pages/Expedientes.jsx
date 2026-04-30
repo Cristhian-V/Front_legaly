@@ -104,14 +104,11 @@ const Expedientes = () => {
       if (!nuevoCasoId) throw new Error("No se pudo obtener el ID del nuevo caso desde el servidor.");
 
       // PASO 2: ASIGNAR CONTACTOS
+      console.log(nuevoCasoId, contactosSeleccionados);
       await casosService.asignarContactos(nuevoCasoId, contactosSeleccionados);
 
       // PASO 3: ASIGNAR EQUIPO DE ABOGADOS
-      // Si tu backend no tiene un endpoint masivo, hacemos un bucle de promesas:
-      const promesasEquipo = equipoSeleccionado.map(abogadoId => 
-        casosService.addMiembroEquipo(nuevoCasoId, abogadoId)
-      );
-      await Promise.all(promesasEquipo); // Ejecuta todas las asignaciones en paralelo
+      await casosService.addMiembroEquipo(nuevoCasoId, equipoSeleccionado);
 
       // FIN: Recargar tabla y limpiar
       await cargarDataCasos();
@@ -325,7 +322,7 @@ const Expedientes = () => {
                     <p className="text-[11px] text-gray-500 mb-2">Seleccione los abogados que conformarán el equipo (además del responsable).</p>
                     <div className="border rounded-lg h-36 overflow-y-auto bg-gray-50 p-2 space-y-1 shadow-inner">
                       {catalogos?.usuarios?.map((abogado) => (
-                         // Opcional: Desactivamos el checkbox del abogado si ya es el responsable para evitar duplicidad
+                        //Desactivamos el checkbox del abogado si ya es el responsable para evitar duplicidad                         
                         <label key={abogado.id} className={`flex items-start gap-2 p-2 rounded cursor-pointer border border-transparent transition-colors ${formData.responsable == abogado.id ? 'opacity-50 bg-gray-100' : 'hover:bg-white hover:border-gray-200'}`}>
                           <input 
                             type="checkbox" 
@@ -334,6 +331,7 @@ const Expedientes = () => {
                             checked={equipoSeleccionado.includes(abogado.id) || formData.responsable == abogado.id}
                             onChange={() => toggleAbogado(abogado.id)}
                           />
+                          {}
                           <div>
                             <p className="text-xs font-bold text-gray-800 leading-none">
                               {abogado.nombre_completo} {formData.responsable == abogado.id && '(Responsable)'}

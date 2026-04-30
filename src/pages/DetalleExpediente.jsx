@@ -17,7 +17,7 @@ import TabHistorial from '../components/expedientes/TabHistorial';
 const DetalleExpediente = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { catalogos, datosUsuario } = useOutletContext() || {};
+  const { catalogos, datosUsuario, recargarPerfil } = useOutletContext() || {};
 
   // Estados Centrales (Solo lo que afecta a toda la página o al Header)
   const [detalleCaso, setDetalleCaso] = useState({});
@@ -42,8 +42,13 @@ const DetalleExpediente = () => {
 
   const [listaDocumentos, setListaDocumentos] = useState([]);
 
-    // Evaluamos si el caso está cerrado basándonos en el estado general
+  // Evaluamos si el caso está cerrado basándonos en el estado general
   const estaCerrado = detalleCaso.caso?.estado === 'Cerrado';
+
+  const recargarDocs = async () => {
+    const listadocs = await docsService.obtenerDocumentosCaso(id)
+    setListaDocumentos(listadocs.documentacion || [])
+  }
 
   const inicializarPagina = useCallback(async () => {
     const esAuth = await authService.isAuthenticated();
@@ -147,7 +152,7 @@ const DetalleExpediente = () => {
       await casosService.aprobarObservarCaso(idRevision.id_activo, evaluacionData);
       alert("La revisión ha sido completada.");
       setIsEvaluarModalOpen(false);
-
+      recargarPerfil()
       inicializarPagina();
       navigate('/revisiones')
     } catch (error) {
@@ -224,86 +229,86 @@ const DetalleExpediente = () => {
           {!estaCerrado ? (
             <div className="flex gap-3">
               <button onClick={abrirModalEdicion} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold shadow-sm">Editar</button>
-              
+
               <div className="relative">
                 <button onClick={() => setIsAccionesOpen(!isAccionesOpen)} className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors">
                   Acciones <span className="text-xs">▼</span>
                 </button>
-              {/* Menú Desplegable */}
-              {isAccionesOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20 animate-fade-in-up">
-                  <div className="py-2">
-                    {/* Variable auxiliar para limpiar el código (Si es null, asumimos "En elaboración" = 6) */}
-                    {(() => {
-                      const estadoRev = detalleCaso.caso?.estado_revision || "En elaboración";
-                      return (
-                        <>
-                          {/* ESCENARIO 1: EN ELABORACIÓN (6) */}
-                          {estadoRev === "En elaboración" && (
-                            <button
-                              onClick={abrirModalRevision}
-                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
-                              <span className="text-lg">👀</span> Solicitar Revisión
-                            </button>
-                          )}
-                          {/* ESCENARIO 2: PENDIENTE (1) para dueño el caso */}
-                          {(estadoRev === "Pendiente" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
-                            <button
-                              onClick={handleCancelarRevision} // <--- AÑADIR ESTA LÍNEA
-                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors"
-                            >
-                              <span className="text-lg">🚫</span> Cancelar Solicitud
-                            </button>
-                          )}
-                          {/* ESCENARIO 3: CON OBSERVACIONES (3) */}
-                          {(estadoRev === "Con Observaciones") && (
-                            <button
-                              onClick={abrirModalRevision}
-                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 transition-colors">
-                              <span className="text-lg">📝</span> Levantar Observaciones
-                            </button>
-                          )}
-                          {/* ESCENARIO 4: EN REVISIÓN (4) para el que envio la solicitud */}
-                          {(estadoRev === "En Revisión" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
-                            <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
-                              <span className="text-lg">🚫</span> El caso ya se encuentra en Revision
-                            </button>
-                          )}
-                          {/* ESCENARIO 4: EN REVISIÓN (4) */}
-                          {/* Nota: En la vida real, aquí pondrías una validación extra para que ESTE botón solo lo vea el JEFE asignado, ej: && datosUsuario.id === detalleCaso.caso.revisor_id */}
-                          {(estadoRev === "En Revisión" && revisionesRecientes[0].autor_id !== datosUsuario.id) && (
-                            <button
-                              onClick={abrirModalEvaluar}
-                              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
-                              <span className="text-lg">⚖️</span> Atender Revisión
-                            </button>
-                          )}
-                          {/* ESCENARIO 5: APROBADO (2) O REVISADO (5) */}
-                          {(estadoRev === "Aprobado" || estadoRev === "Revisado") && (
-                            <div className="px-4 py-2.5 text-sm font-semibold text-green-600 flex items-center gap-3 bg-green-50/50">
-                              <span className="text-lg">✅</span> Revisión Completada
-                            </div>
-                          )}
-                          {/* BOTÓN PARA CERRAR CASO (Siempre al final del menú si no está cerrado) */}
-                          {estadoRev !== "Cerrado" && (
-                            <button
-                              onClick={() => {
-                                setIsCerrarModalOpen(true);
-                                setIsAccionesOpen(false); // Cierra el dropdown
-                              }}
-                              className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors border-t border-gray-100 mt-1"
-                            >
-                              <span className="text-lg">🔒</span> Finalizar Caso
-                            </button>
-                          )}
-                        </>
-                      );
-                    })()}
+                {/* Menú Desplegable */}
+                {isAccionesOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20 animate-fade-in-up">
+                    <div className="py-2">
+                      {/* Variable auxiliar para limpiar el código (Si es null, asumimos "En elaboración" = 6) */}
+                      {(() => {
+                        const estadoRev = detalleCaso.caso?.estado_revision || "En elaboración";
+                        return (
+                          <>
+                            {/* ESCENARIO 1: EN ELABORACIÓN (6) */}
+                            {estadoRev === "En elaboración" && (
+                              <button
+                                onClick={abrirModalRevision}
+                                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
+                                <span className="text-lg">👀</span> Solicitar Revisión
+                              </button>
+                            )}
+                            {/* ESCENARIO 2: PENDIENTE (1) para dueño el caso */}
+                            {(estadoRev === "Pendiente" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
+                              <button
+                                onClick={handleCancelarRevision} // <--- AÑADIR ESTA LÍNEA
+                                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors"
+                              >
+                                <span className="text-lg">🚫</span> Cancelar Solicitud
+                              </button>
+                            )}
+                            {/* ESCENARIO 3: CON OBSERVACIONES (3) */}
+                            {(estadoRev === "Con Observaciones") && (
+                              <button
+                                onClick={abrirModalRevision}
+                                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 transition-colors">
+                                <span className="text-lg">📝</span> Levantar Observaciones
+                              </button>
+                            )}
+                            {/* ESCENARIO 4: EN REVISIÓN (4) para el que envio la solicitud */}
+                            {(estadoRev === "En Revisión" && revisionesRecientes[0].autor_id === datosUsuario.id) && (
+                              <button className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+                                <span className="text-lg">🚫</span> El caso ya se encuentra en Revision
+                              </button>
+                            )}
+                            {/* ESCENARIO 4: EN REVISIÓN (4) */}
+                            {/* Nota: En la vida real, aquí pondrías una validación extra para que ESTE botón solo lo vea el JEFE asignado, ej: && datosUsuario.id === detalleCaso.caso.revisor_id */}
+                            {(estadoRev === "En Revisión" && revisionesRecientes[0].autor_id !== datosUsuario.id) && (
+                              <button
+                                onClick={abrirModalEvaluar}
+                                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+                                <span className="text-lg">⚖️</span> Atender Revisión
+                              </button>
+                            )}
+                            {/* ESCENARIO 5: APROBADO (2) O REVISADO (5) */}
+                            {(estadoRev === "Aprobado" || estadoRev === "Revisado") && (
+                              <div className="px-4 py-2.5 text-sm font-semibold text-green-600 flex items-center gap-3 bg-green-50/50">
+                                <span className="text-lg">✅</span> Revisión Completada
+                              </div>
+                            )}
+                            {/* BOTÓN PARA CERRAR CASO (Siempre al final del menú si no está cerrado) */}
+                            {estadoRev !== "Cerrado" && (
+                              <button
+                                onClick={() => {
+                                  setIsCerrarModalOpen(true);
+                                  setIsAccionesOpen(false); // Cierra el dropdown
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors border-t border-gray-100 mt-1"
+                              >
+                                <span className="text-lg">🔒</span> Finalizar Caso
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
           ) : (
             /* Badge visual para indicar que es de Solo Lectura */
             <div className="px-4 py-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-lg font-bold flex items-center gap-2">
@@ -324,7 +329,7 @@ const DetalleExpediente = () => {
       {/* ENRUTADOR INTERNO DE PESTAÑAS (La magia sucede aquí) */}
       <div className="mt-8">
         {pestañaActiva === 'general' && <TabGeneral casoId={id} detalleCaso={detalleCaso} estaCerrado={estaCerrado} />}
-        {pestañaActiva === 'documentos' && <TabDocumentos casoId={id} catalogos={catalogos} datosUsuario={datosUsuario} estaCerrado={estaCerrado} />}
+        {pestañaActiva === 'documentos' && <TabDocumentos casoId={id} catalogos={catalogos} datosUsuario={datosUsuario} estaCerrado={estaCerrado} recargarDocumentos={recargarDocs}/>}
         {pestañaActiva === 'actividades' && <TabActividades casoId={detalleCaso.caso?.expediente_id} estaCerrado={estaCerrado} />}
         {pestañaActiva === 'equipo' && <TabEquipo casoId={id} catalogos={catalogos} estaCerrado={estaCerrado} />}
         {pestañaActiva === 'historial' && <TabHistorial historial={historialCaso} />}
@@ -392,10 +397,10 @@ const DetalleExpediente = () => {
             <div className="mb-6">
               <Label text="Documentos para Revisión" />
               <div className="border rounded-lg max-h-48 overflow-y-auto bg-gray-50/30 p-2 mt-1">
-                {listaDocumentos.length === 0 ? (
+                {listaDocumentos?.length === 0 ? (
                   <p className="text-xs text-gray-500 text-center py-4">No hay documentos cargados en este caso.</p>
                 ) : (
-                  listaDocumentos.map(doc => (
+                  listaDocumentos?.map(doc => (
                     <label key={doc.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-gray-200">
                       <input
                         type="checkbox"
@@ -492,16 +497,16 @@ const DetalleExpediente = () => {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-              <button 
-                type="button" 
-                onClick={() => setIsCerrarModalOpen(false)} 
+              <button
+                type="button"
+                onClick={() => setIsCerrarModalOpen(false)}
                 disabled={cargandoCierre}
                 className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={cargandoCierre}
                 className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md transition disabled:bg-red-400 flex items-center gap-2"
               >

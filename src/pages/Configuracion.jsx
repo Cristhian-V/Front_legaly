@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import TabUsuarios from '../components/configuracion/TabUsuarios';
-// Más adelante importarás: import TabRoles from '../components/configuracion/TabRoles';
+import TabCatalogos from '../components/configuracion/TabCatalogos';
 
 const Configuracion = () => {
   const [pestañaActiva, setPestañaActiva] = useState('usuarios');
+    const {  datosUsuario } = useOutletContext() || {};
 
   const tabStyle = (tab) =>
     `pb-4 px-4 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${
@@ -18,19 +20,17 @@ const Configuracion = () => {
         <button onClick={() => setPestañaActiva('usuarios')} className={tabStyle('usuarios')}>
           👥 Usuarios y Accesos
         </button>
+        {datosUsuario?.rol === 'Abogado Socio' && (
         <button onClick={() => setPestañaActiva('catalogos')} className={tabStyle('catalogos')}>
           🗂️ Catálogos Generales
         </button>
-        <button onClick={() => setPestañaActiva('empresa')} className={tabStyle('empresa')}>
-          🏢 Datos de la Firma
-        </button>
+        )}
       </div>
 
       {/* Contenido Dinámico según la Pestaña */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-[500px]">
         {pestañaActiva === 'usuarios' && <TabUsuarios />}
-        {pestañaActiva === 'catalogos' && <div className="text-center py-20 text-gray-500">Módulo de Catálogos en construcción...</div>}
-        {pestañaActiva === 'empresa' && <div className="text-center py-20 text-gray-500">Módulo de Empresa en construcción...</div>}
+        {pestañaActiva === 'catalogos' && <TabCatalogos datosUsuario={datosUsuario}  />}
       </div>
     </main>
   );

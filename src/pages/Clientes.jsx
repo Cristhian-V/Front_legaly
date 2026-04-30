@@ -129,7 +129,6 @@ const Clientes = () => {
                 <div><label className="text-xs font-bold text-gray-700">Categoría</label>
                   <select name="categoria_id" value={formData.categoria_id} onChange={handleInputChange} className="w-full p-2 border rounded text-sm">
                     <option value="">Seleccione...</option>
-                    {console.log("Categorías en catálogo:", catalogos.catalogos.categorias_cliente)}
                     {catalogos?.catalogos?.categorias_cliente?.map((cat, i) => (
                       <option key={i} value={cat.id}>{cat.nombre}</option>
                     ))}

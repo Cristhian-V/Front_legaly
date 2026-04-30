@@ -33,7 +33,7 @@ const crearCaso = async (casoData) => {
     });
     return response.data; // Aquí podrías devolver el nuevo caso creado o un mensaje de éxito
   } catch (error) {
-    console.error("Error al obtener los casos:", error);
+    console.error("Error al Crear el caso:", error);
     throw error;
   }
 };

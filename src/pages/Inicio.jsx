@@ -95,7 +95,6 @@ const Inicio = () => {
   return (
     <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
       {/* TARJETAS DE RESUMEN */}
-      {console.log(eventos)}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div onClick={() => navigate('/expedientes')} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600 hover:shadow-2xl transition-all cursor-pointer">
           <div className="flex justify-between items-start">
@@ -122,7 +121,6 @@ const Inicio = () => {
             <div>
               <h3 className="text-gray-500 text-sm font-bold uppercase">Revisiones Pendientes</h3>
               <p className="text-4xl font-black text-gray-800 mt-2">{casosPendientes?.casos_pendientes || 0}</p>
-              {console.log(casosPendientes)}
             </div>
             <img src={iconRevisar} alt="Revisar" width="70" />
           </div>

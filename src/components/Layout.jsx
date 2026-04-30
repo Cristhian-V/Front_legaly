@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import userService from '../services/userService';
 import listadoService from '../services/listadosService';
-import logoAyP from '../image/LogoAyP.png'; 
+import logoAyP from '../image/LogoAyP.png';
 
 
 const Layout = () => {
@@ -21,43 +21,43 @@ const Layout = () => {
   const cargarCatalogos = async () => {
     try {
       // Suponiendo que tienes un servicio para esto
-      const data = await listadoService.traerListados(); 
+      const data = await listadoService.traerListados();
       setCatalogos(data);
     } catch (error) {
       console.error(error);
+    }
+  };
+  const cargarPerfil = async () => {
+    try {
+      const respuestaPerfil = await userService.obtenerPerfil();
+      if (respuestaPerfil && respuestaPerfil.dataUsuario) {
+        setDatosUsuario(respuestaPerfil.dataUsuario);
+      }
+
+      // Peticiones paralelas para que cargue más rápido y aislemos errores
+      const [dataRevisiones, respuestaCatalogos] = await Promise.all([
+        userService.obtenerCasosPendientes().catch(() => ({ casos_pendientes: 0 })), // Si falla, devolvemos 0 por defecto
+        listadoService.traerListados().catch(() => ({})) // Si falla, devolvemos objeto vacío
+      ]);
+
+      setCatalogos(respuestaCatalogos);
+      setCasosPendientes(dataRevisiones);
+
+    } catch (error) {
+      console.error("Error crítico al cargar el Layout:", error);
+
+      // Solo deslogueamos si el servidor nos dice explícitamente que el token es inválido (Error 401 o 403)
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        handleLogout();
+      }
+    } finally {
+      setCargando(false);
     }
   };
 
 
   // Cargamos el perfil UNA SOLA VEZ para toda la aplicación
   useEffect(() => {
-    const cargarPerfil = async () => {
-      try {
-        const respuestaPerfil = await userService.obtenerPerfil();
-        if (respuestaPerfil && respuestaPerfil.dataUsuario) {
-          setDatosUsuario(respuestaPerfil.dataUsuario);
-        }
-        
-        // Peticiones paralelas para que cargue más rápido y aislemos errores
-        const [dataRevisiones, respuestaCatalogos] = await Promise.all([
-          userService.obtenerCasosPendientes().catch(() => ({ casos_pendientes: 0 })), // Si falla, devolvemos 0 por defecto
-          listadoService.traerListados().catch(() => ({})) // Si falla, devolvemos objeto vacío
-        ]);
-
-        setCatalogos(respuestaCatalogos);
-        setCasosPendientes(dataRevisiones);
-
-      } catch (error) {
-        console.error("Error crítico al cargar el Layout:", error);
-        
-        // Solo deslogueamos si el servidor nos dice explícitamente que el token es inválido (Error 401 o 403)
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-           handleLogout();
-        }
-      } finally {
-        setCargando(false);
-      }
-    };
     cargarPerfil();
   }, []);
 
@@ -80,45 +80,57 @@ const Layout = () => {
     const titulosExactos = {
       '/dashboard': {
         'titulo': 'Panel de Control',
-        'descripcion':'Bienvenido/a al Sistema de Gestion de Expedientes de ALAIZA & PEDRAZA Abogados'
+        'descripcion': 'Bienvenido/a al Sistema de Gestion de Expedientes de ALAIZA & PEDRAZA Abogados'
       },
       '/expedientes': {
-        'titulo':'Gestión de Expedientes',
-        'descripcion':'Podras Gestionar tus Expedientes y los de tu equipo desde aqui.'
+        'titulo': 'Gestión de Expedientes',
+        'descripcion': 'Podras Gestionar tus Expedientes y los de tu equipo desde aqui.'
       },
       '/clientes': {
         'titulo': 'Directorio de Clientes',
-        'descripcion':'Gestiona las empresas y personas representadas por la firma.'
+        'descripcion': 'Gestiona las empresas y personas representadas por la firma.'
       },
       '/configuracion': {
-        'titulo':'Configuración del Sistema',
-        'descripcion':'Administra usuarios, roles, catálogos y preferencias de la firma.'
+        'titulo': 'Configuración del Sistema',
+        'descripcion': 'Administra usuarios, roles, catálogos y preferencias de la firma.'
       },
       '/revisiones': {
         'titulo': 'Bandeja de Revisiones',
-        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+        'descripcion': 'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
       },
       '/carpetas': {
         'titulo': 'Gestion de Documentacion',
-        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+        'descripcion': 'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
       }
     };
 
     if (titulosExactos[path]) return titulosExactos[path];
 
     // 2. Comprobaciones para rutas dinámicas (con IDs)
-    if (path.startsWith('/dashboard/')) return {'titulo': 'Panel de Control',
-        'descripcion':'Bienvenido/a al Sistema de Gestion de Expedientes de ALAIZA & PEDRAZA Abogados'};
-    if (path.startsWith('/expedientes/')) return {'titulo':'Gestión de Expedientes',
-        'descripcion':'Podras Gestionar tus Expedientes y los de tu equipo desde aqui.'};
-    if (path.startsWith('/clientes/')) return {'titulo': 'Directorio de Clientes',
-        'descripcion':'Gestiona las empresas y personas representadas por la firma.'};
-    if (path.startsWith('/configuracion/')) return {'titulo':'Configuración del Sistema',
-        'descripcion':'Administra usuarios, roles, catálogos y preferencias de la firma.'};
-    if (path.startsWith('/revisiones/')) return {'titulo': 'Bandeja de Revisiones',
-        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'};
-    if (path.startsWith('/carpetas/')) return {'titulo': 'Gestion de Documentacion',
-        'descripcion':'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'};
+    if (path.startsWith('/dashboard/')) return {
+      'titulo': 'Panel de Control',
+      'descripcion': 'Bienvenido/a al Sistema de Gestion de Expedientes de ALAIZA & PEDRAZA Abogados'
+    };
+    if (path.startsWith('/expedientes/')) return {
+      'titulo': 'Gestión de Expedientes',
+      'descripcion': 'Podras Gestionar tus Expedientes y los de tu equipo desde aqui.'
+    };
+    if (path.startsWith('/clientes/')) return {
+      'titulo': 'Directorio de Clientes',
+      'descripcion': 'Gestiona las empresas y personas representadas por la firma.'
+    };
+    if (path.startsWith('/configuracion/')) return {
+      'titulo': 'Configuración del Sistema',
+      'descripcion': 'Administra usuarios, roles, catálogos y preferencias de la firma.'
+    };
+    if (path.startsWith('/revisiones/')) return {
+      'titulo': 'Bandeja de Revisiones',
+      'descripcion': 'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+    };
+    if (path.startsWith('/carpetas/')) return {
+      'titulo': 'Gestion de Documentacion',
+      'descripcion': 'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+    };
   };
 
   if (cargando) {
@@ -175,7 +187,7 @@ const Layout = () => {
 
         {/* AQUÍ SE INYECTA EL CONTENIDO DINÁMICO (Inicio o Expedientes) */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          <Outlet context={{ datosUsuario, catalogos , casosPendientes, recargarCatalogos: cargarCatalogos, setCasosPendientes:setCasosPendientes}} />
+          <Outlet context={{ datosUsuario, catalogos, casosPendientes, recargarCatalogos: cargarCatalogos, recargarPerfil: cargarPerfil }} />
         </div>
       </div>
     </div>

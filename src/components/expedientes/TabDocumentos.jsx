@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import docsService from '../../services/docsService';
 import { EmptyState, Modal, Label } from '../ui/ComponentesGenerales';
+import wopiDocServices from '../../services/wopiDocService';
 
-const TabDocumentos = ({ casoId, catalogos, datosUsuario, estaCerrado }) => {
+const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }) => {
   const [documentos, setDocumentos] = useState({ documentacion: [] });
   const [cargando, setCargando] = useState(true);
 
   // Estados de Modales y Formularios
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
-  const [tipoDocumento, setTipoDocumento] = useState('');
   const fileInputRef = useRef(null);
 
   // Estados para Nueva Versión
@@ -42,19 +42,18 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario, estaCerrado }) => {
   // --- LÓGICA DE SUBIDA Y DESCARGA ---
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    if (!archivoSeleccionado || !tipoDocumento) return alert("Completa todos los campos");
+    if (!archivoSeleccionado) return alert("Completa todos los campos");
     try {
       const data = new FormData();
       data.append('archivo', archivoSeleccionado);
-      data.append('tipoDocumento', tipoDocumento);
       data.append('expediente_id', casoId);
       data.append('usuario_id', datosUsuario?.id);
       data.append('pesoMB', (archivoSeleccionado.size / (1024 * 1024)).toFixed(2));
-
       await docsService.subirDocumentoCaso(data);
       setIsUploadModalOpen(false);
       setArchivoSeleccionado(null);
       await cargarDocumentos();
+      await recargarDocumentos()
     } catch (error) { alert(error || "Error al subir archivo"); }
   };
 
@@ -108,18 +107,20 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario, estaCerrado }) => {
   };
 
   const handleAbrirOnline = (docId) => {
-    const wopiUrl = `https://office.cumbre.com.bo/browser/dist/cool.html?WOPISrc=https://api.cumbre.com.bo/wopi/files/${docId}`;
+
+    const wopiUrl = wopiDocServices.wopiURL(docId);
     window.open(wopiUrl, '_blank');
   };
 
   const handleCrearDocBlanco = async (e) => {
     e.preventDefault();
-    if (!nuevoDocData.nombreArchivo || !nuevoDocData.tipoDocumento) return alert("Completa los campos.");
+    if (!nuevoDocData.nombreArchivo) return alert("Completa los campos.");
     try {
       const res = await docsService.crearDocumentoBlanco(casoId, nuevoDocData);
       setIsCrearDocOpen(false);
       setNuevoDocData({ nombreArchivo: '', tipoPlantilla: 'word', tipoDocumento: '' });
       await cargarDocumentos();
+      await recargarDocumentos()
       if (window.confirm("Documento creado. ¿Abrir el editor ahora?")) {
         handleAbrirOnline(res.documentacion?.id || res.id);
       }
@@ -219,13 +220,6 @@ const TabDocumentos = ({ casoId, catalogos, datosUsuario, estaCerrado }) => {
       {isUploadModalOpen && (
         <Modal title="Subir Documentación" onClose={() => setIsUploadModalOpen(false)}>
           <form onSubmit={handleUploadSubmit}>
-            <div className="mb-4">
-              <Label text="Tipo de Documento" />
-              <select required value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)} className="w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Seleccione...</option>
-                {catalogos?.catalogos?.tipos_documento?.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-              </select>
-            </div>
             <div onDragOver={(e) => e.preventDefault()} onClick={() => fileInputRef.current.click()} className="border-2 border-dashed p-10 text-center rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
               <input type="file" ref={fileInputRef} onChange={e => setArchivoSeleccionado(e.target.files?.[0])} className="hidden" />
               <p className="text-sm text-gray-500">{archivoSeleccionado ? archivoSeleccionado.name : "Arrastra o haz clic para subir un archivo"}</p>

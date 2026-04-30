@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import adminUsuariosService from '../../services/adminUsuariosService';
 import { useOutletContext } from 'react-router-dom';
+import { Modal, Label, Input } from '../ui/ComponentesGenerales';
 
 const TabUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const { catalogos, datosUsuario } = useOutletContext();
+  const { catalogos, datosUsuario, recargarPerfil } = useOutletContext();
 
   // --- ESTADOS DEL MODAL ---
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,6 +86,7 @@ const TabUsuarios = () => {
         await adminUsuariosService.modificarUsuario(id, datosAEditar);
       }
       await cargarUsuarios();
+      await recargarPerfil()
       setIsModalOpen(false);
       alert(`Usuario ${modalMode === 'crear' ? 'creado' : 'actualizado'} exitosamente.`);
     } catch (error) {
@@ -117,6 +119,8 @@ const TabUsuarios = () => {
 
   if (cargando) return <div className="py-20 text-center animate-pulse text-gray-500">Cargando personal...</div>;
 
+  const esAdminGeneral = datosUsuario?.rol === 'Abogado Socio';
+
   return (
     <div>
       {/* HEADER DE LA PESTAÑA */}
@@ -130,13 +134,16 @@ const TabUsuarios = () => {
             onChange={(e) => setBusqueda(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           />
+
         </div>
-        <button
-          onClick={abrirModalCrear}
-          className="bg-[#0F172A] hover:bg-slate-800 text-white px-5 py-2 rounded-lg font-bold shadow transition flex items-center gap-2"
-        >
-          + Nuevo Usuario
-        </button>
+        {esAdminGeneral && (
+          <button
+            onClick={abrirModalCrear}
+            className="bg-[#0F172A] hover:bg-slate-800 text-white px-5 py-2 rounded-lg font-bold shadow transition flex items-center gap-2"
+          >
+            + Nuevo Usuario
+          </button>
+        )}
       </div>
 
       {/* TABLA DE USUARIOS */}
@@ -152,7 +159,11 @@ const TabUsuarios = () => {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {usuariosFiltrados.map((user) => (
-              <tr key={user.id} className="hover:bg-blue-50/30 transition group">
+              <tr key={user.id}
+                className={`transition group ${user.estado_id === 2
+                    ? 'bg-orange-100 hover:bg-orange-100'
+                    : 'hover:bg-blue-50/30'
+                  }`}>
                 <td className="p-4 flex items-center gap-3">
                   <img
                     src={user.avatar_url || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"}
@@ -174,10 +185,16 @@ const TabUsuarios = () => {
                   </span>
                 </td>
                 <td className="p-4 text-right">
-                  <button onClick={() => abrirModalEditar(user)} className="text-blue-600 font-bold text-xs hover:underline mr-4">
-                    Editar
-                  </button>
-                  {datosUsuario?.rol_id === 5 && (
+                  {user.estado_id === 1 ? (
+                    <button onClick={() => abrirModalEditar(user)} className="text-blue-600 font-bold text-xs hover:underline mr-4">
+                      Editar
+                    </button>
+                  ) : (
+                    <button onClick={() => abrirModalEditar(user)} className="text-blue-600 font-bold text-xs hover:underline mr-4">
+                      Habilitar
+                    </button>
+                  )}
+                  {(datosUsuario?.rol === 'Abogado Socio' && user.estado_id === 1) && (
                     <button
                       onClick={() => handleEliminar(user.id, user.nombre_completo)}
                       className="text-red-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
@@ -197,84 +214,123 @@ const TabUsuarios = () => {
 
       {/* MODAL CREAR / EDITAR USUARIO */}
       {isModalOpen && (
-        <form onSubmit={handleGuardar} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <Modal
+          title={modalMode === 'crear' ? 'Registrar Nuevo Usuario' : 'Editar Datos de Usuario'}
+          onClose={() => setIsModalOpen(false)}
+        >
+          <form onSubmit={handleGuardar} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* 1. Nombre Completo (Siempre Obligatorio) */}
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">Nombre Completo *</label>
-              <input required name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              {/* 1. Nombre Completo */}
+              <div>
+                <Label text="Nombre Completo *" />
+                <Input required name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} />
+              </div>
+
+              {/* 2. Nombre de Usuario (Login) */}
+              <div>
+                <Label text="Nombre de Usuario (Login) *" />
+                <Input required name="name_user" value={formData.name_user} onChange={handleChange} />
+              </div>
+
+              {/* 3. Correo Electrónico */}
+              <div>
+                <Label text="Correo Electrónico *" />
+                <Input required type="email" name="email" value={formData.email} onChange={handleChange} />
+              </div>
+
+              {/* 4. Rol en el Sistema (RESTRINGIDO) */}
+              <div>
+                <Label text="Rol en el Sistema *" />
+                <select
+                  name="rol_usuario"
+                  required
+                  disabled={!esAdminGeneral}
+                  value={formData.rol_usuario}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 ${!esAdminGeneral ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''}`}
+                >
+                  <option value="">Asignar a...</option>
+                  {catalogos?.catalogos?.roles_usuario?.map((rol, i) => (
+                    <option key={i} value={rol.id}>{rol.nombre}</option>
+                  ))}
+                </select>
+                {!esAdminGeneral && <p className="text-[10px] text-gray-400 mt-1 italic">Solo el Administrador General puede cambiar roles.</p>}
+              </div>
+
+              {/* 5. Contraseña (Visible siempre, obligatoria al crear) */}
+              <div>
+                <Label text={`Contraseña ${modalMode === 'crear' ? '*' : '(Opcional)'}`} />
+                <Input
+                  required={modalMode === 'crear'}
+                  type="password"
+                  name="password"
+                  placeholder={modalMode === 'editar' ? 'Dejar en blanco para no cambiar' : '********'}
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+              </div>
+
+              {/* 6. Grado Académico (RESTRINGIDO) */}
+              <div>
+                <Label text="Grado Académico *" />
+                <select
+                  name="grado_id"
+                  required
+                  disabled={!esAdminGeneral}
+                  value={formData.grado_id}
+                  onChange={handleInputChange}
+                  className={`w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 ${!esAdminGeneral ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''}`}
+                >
+                  <option value="">Seleccionar...</option>
+                  {catalogos?.catalogos?.grados_academicos?.map((grado, i) => (
+                    <option key={i} value={grado.id}>{grado.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 7. Teléfono (SOLO VISIBLE AL EDITAR) */}
+              {modalMode === 'editar' && (
+                <div>
+                  <Label text="Teléfono *" />
+                  <Input required name="telefono" value={formData.telefono} onChange={handleChange} />
+                </div>
+              )}
             </div>
 
-            {/* 2. Nombre de Usuario (Siempre Obligatorio) */}
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">Nombre de Usuario (Login) *</label>
-              <input required name="name_user" value={formData.name_user} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            {/* 8. Biografía (SOLO VISIBLE AL EDITAR) */}
+            {modalMode === 'editar' && (
+              <div className="mb-4">
+                <Label text="Biografía / Notas *" />
+                <textarea
+                  required
+                  name="biografia"
+                  value={formData.biografia}
+                  onChange={handleChange}
+                  className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20"
+                  placeholder="Información adicional del colega..."
+                ></textarea>
+              </div>
+            )}
+
+            {/* BOTONES DE ACCIÓN */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition"
+              >
+                {modalMode === 'crear' ? 'Registrar Usuario' : 'Guardar Cambios'}
+              </button>
             </div>
-
-            {/* 3. Correo (Siempre Obligatorio) */}
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">Correo Electrónico *</label>
-              <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-
-            {/* 4. Rol (Siempre Obligatorio) */}
-            <div>
-              {console.log(formData)}
-              <label className="text-xs font-bold text-gray-700 block mb-1">Rol en el Sistema *</label>
-              <select name="rol_usuario" required value={formData.rol_usuario} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="">Asignar a...</option>
-                {catalogos?.catalogos?.roles_usuario?.map((rol, i) => (
-                  <option key={i} value={rol.id}>{rol.nombre}</option>
-                ))}
-              </select>
-            </div>
-
-
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">Contraseña *</label>
-              <input required={modalMode === 'crear'} type="password" name="password" value={formData.password} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-
-
-            {/* 6. Teléfono (Obligatorio SOLO al editar) */}
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">
-                Teléfono {modalMode === 'editar' && '*'}
-              </label>
-              <input required={modalMode === 'editar'} name="telefono" value={formData.telefono} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-
-            {/* 7. Grado Académico (Obligatorio SOLO al editar) */}
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1">
-                Grado Académico {modalMode === 'editar' && '*'}
-              </label>
-              <select required={modalMode === 'editar'} name="grado_id" value={formData.grado_id} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="">Seleccionar...</option>
-                {catalogos?.catalogos?.grados_academicos?.map((grado, i) => (
-                  <option key={i} value={grado.id}>{grado.nombre}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* 8. Biografía (Obligatorio SOLO al editar) */}
-          <div className="mb-6">
-            <label className="text-xs font-bold text-gray-700 block mb-1">
-              Biografía / Notas {modalMode === 'editar' && '*'}
-            </label>
-            <textarea required={modalMode === 'editar'} name="biografia" value={formData.biografia} onChange={handleChange} className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20" placeholder="Información adicional del colega..."></textarea>
-          </div>
-
-          {/* BOTONES */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-            <button type="submit" className="px-6 py-2 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition">
-              {modalMode === 'crear' ? 'Registrar Usuario' : 'Guardar Cambios'}
-            </button>
-          </div>
-        </form>
+          </form>
+        </Modal>
       )}
     </div>
   );
