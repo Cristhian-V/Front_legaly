@@ -100,8 +100,8 @@ const TabCatalogos = ({datosUsuario}) => {
       await cargarDatosCatalogo(catalogoActivo.id); 
     } catch (error) { alert("Error al activar: " + error); }
   };
-
-  if (datosUsuario?.rol !== 'Abogado Socio') {
+  console.log(datosUsuario)
+  if (datosUsuario?.rol === 'Abogado Socio') {
   return (
     <div className="flex flex-col md:flex-row gap-8">
       
