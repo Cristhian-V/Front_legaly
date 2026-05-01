@@ -296,7 +296,7 @@ const handleDescargarDocumento = async (ruta) => {
                     <span className="text-2xl">{getFileIcon(doc.nombre)}</span>
                     <span className="font-bold text-gray-800">{doc.nombre}</span>
                   </td>
-                  <td className="p-4 text-sm text-gray-500">{new Date(doc.fecha_modificacion).toLocaleDateString()}</td>
+                  <td className="p-4 text-sm text-gray-500">{doc.fecha_mod_format}</td>
 
                   <td className="p-4 text-right space-x-4">
                     {/* NUEVO BOTÓN: EDITOR ONLINE */}
