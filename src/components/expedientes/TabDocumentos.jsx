@@ -11,13 +11,7 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const fileInputRef = useRef(null);
-
-  // Estados para Nueva Versión
-  const [isModificarModalOpen, setIsModificarModalOpen] = useState(false);
-  const [docAModificar, setDocAModificar] = useState(null);
-  const [archivoVersion, setArchivoVersion] = useState(null);
-  const [comentariosVersion, setComentariosVersion] = useState('');
-  const fileVersionInputRef = useRef(null);
+  const [guardando, setGuardando] = useState(false);
 
   // Estados para Documento en Blanco (Online)
   const [isCrearDocOpen, setIsCrearDocOpen] = useState(false);
@@ -44,6 +38,7 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
     e.preventDefault();
     if (!archivoSeleccionado) return alert("Completa todos los campos");
     try {
+      setGuardando(true);
       const data = new FormData();
       data.append('archivo', archivoSeleccionado);
       data.append('expediente_id', casoId);
@@ -55,6 +50,7 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
       await cargarDocumentos();
       await recargarDocumentos()
     } catch (error) { alert(error || "Error al subir archivo"); }
+    finally { setGuardando(false); }
   };
 
   const handleDescargarDocumento = async (ruta) => {
@@ -78,28 +74,6 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
       await cargarDocumentos();
     };
   */
-  // --- LÓGICA DE NUEVA VERSIÓN ---
-  const abrirModalModificar = (doc) => {
-    setDocAModificar(doc);
-    setArchivoVersion(null);
-    setComentariosVersion('');
-    setIsModificarModalOpen(true);
-  };
-
-  const handleVersionSubmit = async (e) => {
-    e.preventDefault();
-    if (!archivoVersion) return alert("Por favor selecciona el nuevo archivo.");
-    try {
-      const data = new FormData();
-      data.append('archivo', archivoVersion);
-      data.append('comentarios', comentariosVersion);
-      await docsService.subirNuevaVersion(docAModificar.id, data);
-      setIsModificarModalOpen(false);
-      alert("Nueva versión subida correctamente.");
-      await cargarDocumentos();
-    } catch (error) { alert("Error al subir la nueva versión: " + error); }
-  };
-
   // --- LÓGICA ONLINE (WOPI) ---
   const esEditableOnline = (extension) => {
     const ext = extension?.toLowerCase().replace('.', '') || '';
@@ -116,6 +90,7 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
     e.preventDefault();
     if (!nuevoDocData.nombreArchivo) return alert("Completa los campos.");
     try {
+      setGuardando(true);
       const res = await docsService.crearDocumentoBlanco(casoId, nuevoDocData);
       setIsCrearDocOpen(false);
       setNuevoDocData({ nombreArchivo: '', tipoPlantilla: 'word', tipoDocumento: '' });
@@ -125,6 +100,7 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
         handleAbrirOnline(res.documentacion?.id || res.id);
       }
     } catch (error) { alert("Error al crear el documento: " + error); }
+    finally { setGuardando(false); }
   };
 
   // --- HELPERS ---
@@ -141,9 +117,9 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold">Documentos del Expediente</h3>
         {!estaCerrado && (
-          <div className="flex gap-3">
-            <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ Doc en Blanco</button>
-            <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#0F172A] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">+ Subir Documento</button>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ Doc en Blanco</button>
+            <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#1E3A5F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">+ Subir Documento</button>
           </div>
         )}
       </div>
@@ -197,13 +173,9 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
                       <>
                         {esEditableOnline(doc.extension) && (
                           <button onClick={() => handleAbrirOnline(doc.id)} className="text-green-600 hover:text-green-800 font-bold text-xs mr-4 transition inline-flex items-center gap-1">
-                            <span>📝</span> Abrir Editor
+                            <span>📝</span> Editar
                           </button>
                         )}
-
-                        <button onClick={() => abrirModalModificar(doc)} className="text-yellow-600 hover:text-yellow-800 font-bold text-xs mr-4 transition-colors">
-                          Modificar
-                        </button>
                         {/*<button onClick={() => handleEliminarDocumento(doc.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs">Eliminar</button>*/}
                       </>
                     )}
@@ -225,8 +197,8 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
               <p className="text-sm text-gray-500">{archivoSeleccionado ? archivoSeleccionado.name : "Arrastra o haz clic para subir un archivo"}</p>
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button type="button" onClick={() => setIsUploadModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 font-bold">Cancelar</button>
-              <button type="submit" disabled={!archivoSeleccionado} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-bold disabled:bg-gray-300">Subir</button>
+              <button type="button" onClick={() => setIsUploadModalOpen(false)} disabled={guardando} className="px-4 py-2 text-sm text-gray-600 font-bold disabled:opacity-50">Cancelar</button>
+              <button type="submit" disabled={!archivoSeleccionado || guardando} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-bold disabled:bg-gray-300">{guardando ? 'Subiendo...' : 'Subir'}</button>
             </div>
           </form>
         </Modal>
@@ -252,32 +224,8 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-              <button type="button" onClick={() => setIsCrearDocOpen(false)} className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100">Cancelar</button>
-              <button type="submit" className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-md">Crear y Guardar</button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* 3. Modal Modificar Versión */}
-      {isModificarModalOpen && (
-        <Modal title="Actualizar Versión de Documento" onClose={() => setIsModificarModalOpen(false)}>
-          <form onSubmit={handleVersionSubmit}>
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-              <p className="text-xs text-blue-800 font-semibold mb-1">Reemplazando archivo actual:</p>
-              <p className="text-sm font-bold text-blue-900">{docAModificar?.nombre}</p>
-            </div>
-            <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) setArchivoVersion(e.dataTransfer.files[0]); }} onClick={() => fileVersionInputRef.current.click()} className={`border-2 border-dashed p-10 text-center rounded-xl cursor-pointer transition-colors mb-4 ${archivoVersion ? 'border-yellow-500 bg-yellow-50' : 'hover:bg-gray-50 border-gray-300'}`}>
-              <input type="file" ref={fileVersionInputRef} onChange={e => setArchivoVersion(e.target.files?.[0])} className="hidden" />
-              <p className="text-sm text-gray-600 font-medium">{archivoVersion ? `📄 ${archivoVersion.name}` : "Arrastra o haz clic para subir la NUEVA VERSIÓN"}</p>
-            </div>
-            <div className="mb-4">
-              <Label text="Comentarios sobre esta modificación (Opcional)" />
-              <textarea value={comentariosVersion} onChange={(e) => setComentariosVersion(e.target.value)} className="w-full p-2 border rounded text-sm resize-none h-20 outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Ej: Se corrigió la cláusula 4..." />
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button type="button" onClick={() => setIsModificarModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 font-bold hover:bg-gray-100 rounded">Cancelar</button>
-              <button type="submit" disabled={!archivoVersion} className="bg-yellow-600 text-white px-6 py-2 rounded text-sm font-bold disabled:bg-gray-300 hover:bg-yellow-700 shadow-md">Subir Nueva Versión</button>
+              <button type="button" onClick={() => setIsCrearDocOpen(false)} disabled={guardando} className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 disabled:opacity-50">Cancelar</button>
+              <button type="submit" disabled={guardando} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-md disabled:opacity-50">{guardando ? 'Creando...' : 'Crear y Guardar'}</button>
             </div>
           </form>
         </Modal>

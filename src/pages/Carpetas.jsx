@@ -12,6 +12,7 @@ const Carpetas = () => {
   // --- ESTADOS DEL MODAL ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('crear'); // 'crear' o 'editar'
+  const [guardando, setGuardando] = useState(false);
   const [carpetaForm, setCarpetaForm] = useState({ id: null, nombre: '' });
 
   const cargarCarpetas = async () => {
@@ -43,6 +44,7 @@ const Carpetas = () => {
     if (!carpetaForm.nombre.trim()) return alert("El nombre no puede estar vacío");
 
     try {
+      setGuardando(true);
       if (modalMode === 'crear') {
         await carpetasService.crearCarpeta(carpetaForm.nombre);
       } else {
@@ -52,6 +54,8 @@ const Carpetas = () => {
       setIsModalOpen(false);
     } catch (error) {
       alert(`Error al ${modalMode} la carpeta: ${error.message}`);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -64,7 +68,7 @@ const Carpetas = () => {
   if (cargando) return <div className="p-20 text-center text-gray-500 animate-pulse">Cargando carpetas...</div>;
 
   return (
-    <main className="p-8 max-w-7xl mx-auto">
+    <main className="px-4 py-4 md:px-8 md:py-8 max-w-7xl mx-auto">
       {/* HEADER */}
 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         
@@ -85,7 +89,7 @@ const Carpetas = () => {
         {/* BOTÓN */}
         <button
           onClick={abrirModalCrear}
-          className="bg-[#0F172A] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
+          className="bg-[#1E3A5F] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
         >
           <span className="text-lg">+</span> Nueva Carpeta
         </button>
@@ -112,7 +116,7 @@ const Carpetas = () => {
 
               </div>
               <div>
-                <h3 className="font-bold text-[#080E21] line-clamp-2 leading-tight">
+                <h3 className="font-bold text-[#152844] line-clamp-2 leading-tight">
                   {carpeta.nombre_carpeta}
                 </h3>
                 {/* Opcional: Si el backend devuelve cantidad de archivos, lo pones aquí */}
@@ -127,7 +131,7 @@ const Carpetas = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
-            <div className="bg-[#080E21] p-4 flex justify-between items-center">
+            <div className="bg-[#152844] p-4 flex justify-between items-center">
               <h2 className="text-white font-bold">
                 {modalMode === 'crear' ? 'Crear Nueva Carpeta' : 'Renombrar Carpeta'}
               </h2>
@@ -152,15 +156,17 @@ const Carpetas = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition"
+                  disabled={guardando}
+                  className="px-4 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition"
+                  disabled={guardando}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50"
                 >
-                  {modalMode === 'crear' ? 'Crear' : 'Guardar'}
+                  {guardando ? 'Guardando...' : modalMode === 'crear' ? 'Crear' : 'Guardar'}
                 </button>
               </div>
             </form>

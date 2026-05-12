@@ -6,10 +6,7 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        // Podrías añadir el azul corporativo de Legaly aquí
-        'legal-blue': '#1e3a8a', 
-      },
+      colors: {},
     },
   },
   plugins: [],

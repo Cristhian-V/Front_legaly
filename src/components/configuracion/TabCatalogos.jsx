@@ -18,14 +18,16 @@ const TabCatalogos = ({datosUsuario}) => {
   // Estados del Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('crear');
+  const [guardando, setGuardando] = useState(false);
   
   // Eliminamos 'descripcion' y añadimos 'titulo' al estado base
-  const [formData, setFormData] = useState({ id: null, nombre: '', codigo: '', titulo: '' });
+  const [formData, setFormData] = useState({ id: null, nombre: '', codigo: '', titulo: '', color: '#3b82f6' });
 
   // Variables auxiliares para saber qué campos extra mostrar según la pestaña
   const usaCodigo = catalogoActivo.id === 'area-legal';
   const usaTitulo = catalogoActivo.id === 'grados';
-  const mostrarColumnaExtra = usaCodigo || usaTitulo;
+  const usaColor = catalogoActivo.id === 'tipos-evento';
+  const mostrarColumnaExtra = usaCodigo || usaTitulo || usaColor;
 
   useEffect(() => {
     cargarDatosCatalogo(catalogoActivo.id);
@@ -49,7 +51,7 @@ const TabCatalogos = ({datosUsuario}) => {
 
   const abrirModalCrear = () => {
     setModalMode('crear');
-    setFormData({ id: null, nombre: '', codigo: '', titulo: '' });
+    setFormData({ id: null, nombre: '', codigo: '', titulo: '', color: '#3b82f6' });
     setIsModalOpen(true);
   };
 
@@ -59,7 +61,8 @@ const TabCatalogos = ({datosUsuario}) => {
       id: registro.id, 
       nombre: registro.nombre || '', 
       codigo: registro.codigo || '', 
-      titulo: registro.titulo || '' 
+      titulo: registro.titulo || '',
+      color: registro.color || '#3b82f6'
     });
     setIsModalOpen(true);
   };
@@ -67,10 +70,11 @@ const TabCatalogos = ({datosUsuario}) => {
   const handleGuardar = async (e) => {
     e.preventDefault();
     try {
-      // Preparamos el payload solo con lo que existe para esa tabla
+      setGuardando(true);
       const payload = { nombre: formData.nombre };
       if (usaCodigo) payload.codigo = formData.codigo;
       if (usaTitulo) payload.titulo = formData.titulo;
+      if (usaColor) payload.color = formData.color;
 
       if (modalMode === 'crear') {
         await catalogosAdminService.crearRegistro(catalogoActivo.id, payload);
@@ -82,6 +86,8 @@ const TabCatalogos = ({datosUsuario}) => {
       setIsModalOpen(false);
     } catch (error) {
       alert(error.response?.data?.error || "Error al guardar el registro.");
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -115,7 +121,7 @@ const TabCatalogos = ({datosUsuario}) => {
               onClick={() => setCatalogoActivo(cat)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
                 catalogoActivo.id === cat.id 
-                  ? 'bg-[#080E21] text-white shadow-md' 
+                  ? 'bg-[#152844] text-white shadow-md' 
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -131,7 +137,7 @@ const TabCatalogos = ({datosUsuario}) => {
         
         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div>
-            <h2 className="text-xl font-bold text-[#080E21]">{catalogoActivo.nombre}</h2>
+            <h2 className="text-xl font-bold text-[#152844]">{catalogoActivo.nombre}</h2>
             <p className="text-xs text-gray-500 mt-1">Gestiona las opciones disponibles para el sistema.</p>
           </div>
           <button 
@@ -154,10 +160,10 @@ const TabCatalogos = ({datosUsuario}) => {
                   <th className="p-4 rounded-tl-lg">ID</th>
                   <th className="p-4">Nombre Completo</th>
                   
-                  {/* COLUMNA DINÁMICA: Solo se dibuja si el catálogo tiene Código o Título */}
+                  {/* COLUMNAS DINÁMICAS */}
                   {mostrarColumnaExtra && (
                     <th className="p-4">
-                      {usaCodigo ? 'Código' : 'Abreviatura'}
+                      {usaCodigo ? 'Código' : usaTitulo ? 'Abreviatura' : 'Color'}
                     </th>
                   )}
 
@@ -181,9 +187,13 @@ const TabCatalogos = ({datosUsuario}) => {
                       {/* CELDA DINÁMICA */}
                       {mostrarColumnaExtra && (
                         <td className="p-4 text-sm text-gray-600">
-                          <span className="px-2 py-0.5 bg-gray-200 rounded font-mono text-xs font-bold text-gray-700">
-                            {usaCodigo ? reg.codigo : reg.titulo}
-                          </span>
+                          {usaColor ? (
+                            <span className="w-4 h-4 rounded-full inline-block align-middle border border-gray-300" style={{ backgroundColor: reg.color || '#9ca3af' }}></span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-gray-200 rounded font-mono text-xs font-bold text-gray-700">
+                              {usaCodigo ? reg.codigo : reg.titulo}
+                            </span>
+                          )}
                         </td>
                       )}
 
@@ -252,10 +262,28 @@ const TabCatalogos = ({datosUsuario}) => {
               </div>
             )}
 
+            {/* CAMPO CONDICIONAL: Color (Tipos de Evento) */}
+            {usaColor && (
+              <div>
+                <Label text="Color del Evento *" />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    className="w-12 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
+                  />
+                  <span className="text-xs text-gray-500">{formData.color}</span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Este color se usará en el calendario para identificar el tipo de evento.</p>
+              </div>
+            )}
+
             <div className="flex justify-end gap-3 pt-6">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-              <button type="submit" className="px-6 py-2 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition">
-                Guardar Registro
+              <button type="button" onClick={() => setIsModalOpen(false)} disabled={guardando} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition disabled:opacity-50">Cancelar</button>
+              <button type="submit" disabled={guardando} className="px-6 py-2 bg-[#1E3A5F] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50">
+                {guardando ? 'Guardando...' : 'Guardar Registro'}
               </button>
             </div>
           </form>

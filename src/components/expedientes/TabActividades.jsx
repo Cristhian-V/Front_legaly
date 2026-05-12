@@ -10,6 +10,7 @@ const TabActividades = ({ casoId, estaCerrado }) => {
   // Estados del Formulario Lateral
   const [modoEdicion, setModoEdicion] = useState(false);
   const [eventoActivoId, setEventoActivoId] = useState(null);
+  const [guardando, setGuardando] = useState(false);
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
@@ -63,7 +64,8 @@ const TabActividades = ({ casoId, estaCerrado }) => {
   const handleGuardar = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...formData, caso_id: casoId }; // Siempre enviamos el caso_id
+      setGuardando(true);
+      const payload = { ...formData, caso_id: casoId };
 
       if (modoEdicion) {
         await eventosService.modificarEvento(eventoActivoId, payload);
@@ -75,6 +77,8 @@ const TabActividades = ({ casoId, estaCerrado }) => {
       limpiarFormulario();
     } catch (error) {
       alert("Error al guardar la actividad: " + error);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -105,7 +109,7 @@ const TabActividades = ({ casoId, estaCerrado }) => {
 
       {/* COLUMNA IZQUIERDA: LISTADO DE EVENTOS (Más ancha) */}
       <div className="col-span-1 lg:col-span-2 space-y-4">
-        <h3 className="text-xl font-black text-[#080E21] mb-4">Cronograma del Caso</h3>
+        <h3 className="text-xl font-black text-[#152844] mb-4">Cronograma del Caso</h3>
 
         {eventos.length === 0 ? (
           <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
@@ -163,10 +167,10 @@ const TabActividades = ({ casoId, estaCerrado }) => {
       {!estaCerrado && (
         <div className="col-span-1">
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm sticky top-6">
-            <h3 className="text-lg font-bold text-[#080E21] mb-1">
+            <h3 className="text-lg font-bold text-[#152844] mb-1">
               {modoEdicion ? '✏️ Editar Actividad' : '➕ Nueva Actividad'}
             </h3>
-            <p className="text-xs text-gray-500 mb-6">Registra un evento, vencimiento o audiencia para el calendario.</p>
+            <p className="text-xs text-gray-500 mb-6">Registra un evento, fecha de cierre o audiencia para el calendario.</p>
 
             <form onSubmit={handleGuardar} className="space-y-4">
               <div>
@@ -210,8 +214,8 @@ const TabActividades = ({ casoId, estaCerrado }) => {
               </div>
 
               <div className="pt-2 flex flex-col gap-2">
-                <button type="submit" className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition">
-                  {modoEdicion ? 'Guardar Cambios' : 'Registrar Evento'}
+                <button type="submit" disabled={guardando} className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition disabled:opacity-50">
+                  {guardando ? 'Guardando...' : modoEdicion ? 'Guardar Cambios' : 'Registrar Evento'}
                 </button>
 
                 {modoEdicion && (

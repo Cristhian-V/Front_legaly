@@ -15,24 +15,24 @@ const TabHistorial = ({ historial }) => {
     <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
       <div className="mb-10 flex justify-between items-end">
         <div>
-          <h3 className="text-lg font-bold text-[#080E21]">Línea de Tiempo del Caso</h3>
+          <h3 className="text-lg font-bold text-[#152844]">Línea de Tiempo del Caso</h3>
           <p className="text-sm text-gray-500">Trazabilidad completa de estados y acciones en este expediente</p>
         </div>
         <div className="text-sm font-semibold text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border">
-          Total de eventos: <span className="text-[#080E21]">{historial.total_eventos}</span>
+          Total de eventos: <span className="text-[#152844]">{historial.total_eventos}</span>
         </div>
       </div>
 
       <div className="relative pt-4 pb-12">
-        {/* LÍNEA VERTICAL CENTRAL CONTINUA */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 -translate-x-1/2 z-0"></div>
+        {/* LÍNEA VERTICAL — centrada en desktop, a la izquierda en mobile */}
+        <div className="absolute left-5 md:left-1/2 top-0 bottom-0 w-px bg-gray-200 md:-translate-x-1/2 z-0"></div>
 
         {historial.historial.map((grupoFecha, grupoIndex) => (
           <div key={grupoIndex} className="mb-12">
             
             {/* Etiqueta de la Fecha Centrada */}
             <div className="flex justify-center mb-8 relative z-10">
-              <span className="bg-[#080E21] text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-md">
+              <span className="bg-[#152844] text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-md">
                 {grupoFecha.fecha_etiqueta}
               </span>
             </div>
@@ -67,19 +67,19 @@ const TabHistorial = ({ historial }) => {
                 const { bg: iconBg, text: iconText, emoji: iconEmoji } = estiloActual;
 
                 return (
-                  <div key={evento.id || index} className="relative flex items-center justify-center w-full">
-                    {/* Icono del Evento (Centro) */}
-                    <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm border-2 border-white ${iconBg} ${iconText}`}>
+                  <div key={evento.id || index} className="relative flex items-center w-full pl-14 md:pl-0">
+                    {/* Icono del Evento — izquierda en mobile, centro en desktop */}
+                    <div className={`absolute left-5 md:left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm border-2 border-white ${iconBg} ${iconText}`}>
                       <span className="text-lg">{iconEmoji}</span>
                     </div>
 
-                    {/* Tarjeta del Evento */}
-                    <div className={`w-full flex ${esIzquierda ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`w-[calc(50%-2.5rem)] ${esIzquierda ? 'pr-2' : 'pl-2'}`}>
+                    {/* Tarjeta del Evento — full width en mobile, alternada en desktop */}
+                    <div className={`w-full flex justify-start ${!esIzquierda ? 'md:justify-end' : ''}`}>
+                      <div className={`w-full md:w-[calc(50%-2.5rem)] pl-2 ${esIzquierda ? 'md:pr-2 md:pl-0' : ''}`}>
                         <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm transition hover:shadow-md hover:border-gray-300 relative group">
                           
                           <p className="absolute top-5 right-5 text-xs text-gray-400 font-bold">{evento.hora}</p>
-                          <h4 className="text-sm font-bold text-[#080E21] mb-1.5 pr-16">{evento.titulo}</h4>
+                          <h4 className="text-sm font-bold text-[#152844] mb-1.5 pr-16">{evento.titulo}</h4>
                           <p className="text-sm text-gray-600 mb-4 leading-relaxed">{evento.descripcion}</p>
                           
                           <div className="flex items-center gap-2 pt-3 border-t border-gray-50">

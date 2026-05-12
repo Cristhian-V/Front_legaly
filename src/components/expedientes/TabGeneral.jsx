@@ -8,6 +8,7 @@ const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
   const [contactosDisponibles, setContactosDisponibles] = useState([]);
   const [contactosSeleccionados, setContactosSeleccionados] = useState([]);
   const [isContactosModalOpen, setIsContactosModalOpen] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     const cargarContactos = async () => {
@@ -35,11 +36,13 @@ const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
     e.preventDefault();
     if (contactosSeleccionados.length === 0) return alert("Selecciona al menos uno.");
     try {
+      setGuardando(true);
       await casosService.asignarContactos(casoId, contactosSeleccionados);
       const resContactos = await casosService.obtenerContactosAsignados(casoId);
       setContactosAsignados(resContactos || []);
       setIsContactosModalOpen(false);
     } catch (error) { alert("Error al asignar contactos: "+ error); }
+    finally { setGuardando(false); }
   };
 
   const handleQuitarContacto = async (contactoId, nombreContacto) => {
@@ -55,7 +58,7 @@ const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* CUADRO: DESCRIPCIÓN */}
       <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-        <h3 className="text-lg font-bold text-[#080E21] mb-4">Descripción del Caso</h3>
+        <h3 className="text-lg font-bold text-[#152844] mb-4">Descripción del Caso</h3>
         <p className="text-gray-600 text-sm mb-8 leading-relaxed">{detalleCaso.caso?.descripcion}</p>
         <hr className="mb-6 border-gray-100" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -63,14 +66,14 @@ const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
           <InfoBox label="Contraparte" value={detalleCaso.caso?.contraparte || 'No especificada'} />
           <InfoBox label="Fecha Inicio" value={detalleCaso.caso?.fecha_inicio} />
           {console.log(detalleCaso.caso)}
-          <InfoBox label="Vencimiento" value={detalleCaso.caso?.fecha_cierre} color="text-red-500" />
+          <InfoBox label="Fecha de Cierre" value={detalleCaso.caso?.fecha_cierre} color="text-red-500" />
         </div>
       </div>
 
       {/* CUADRO: CONTACTOS ASIGNADOS */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm h-fit">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-[#080E21]">Contactos del Cliente</h3>
+          <h3 className="text-lg font-bold text-[#152844]">Contactos del Cliente</h3>
           {!estaCerrado && (
           <button onClick={abrirModalContactos} className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors">+ Añadir</button>
           )}
@@ -123,8 +126,8 @@ const TabGeneral = ({ casoId, detalleCaso, estaCerrado }) => {
               })}
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-              <button type="button" onClick={() => setIsContactosModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100">Cancelar</button>
-              <button type="submit" disabled={contactosSeleccionados.length === 0} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md disabled:bg-gray-300">Vincular Seleccionados</button>
+              <button type="button" onClick={() => setIsContactosModalOpen(false)} disabled={guardando} className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 disabled:opacity-50">Cancelar</button>
+              <button type="submit" disabled={contactosSeleccionados.length === 0 || guardando} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md disabled:bg-gray-300">{guardando ? 'Vinculando...' : 'Vincular Seleccionados'}</button>
             </div>
           </form>
         </Modal>

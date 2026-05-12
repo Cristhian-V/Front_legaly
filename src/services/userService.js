@@ -3,6 +3,7 @@ axios.defaults.withCredentials = true;
 
 // Definimos la URL base de tu backend 
 const API_URL = `${import.meta.env.VITE_API_URL}/inicio`;
+const API_USER = `${import.meta.env.VITE_API_URL}/user`;
 
 
 const obtenerPerfil = async () => {
@@ -42,11 +43,22 @@ const obtenerCasosPendientes = async () => {
   }
 };
 
+const obtenerUsuariosPorArea = async () => {
+  try {
+    const response = await axios.get(`${API_USER}/area`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener usuarios por área:", error);
+    throw error;
+  }
+};
+
 
 const userService = {
   obtenerPerfil,
   obtenerCasos,
-  obtenerCasosPendientes
+  obtenerCasosPendientes,
+  obtenerUsuariosPorArea
 };
 
 export default userService;

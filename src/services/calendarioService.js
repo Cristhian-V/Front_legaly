@@ -14,8 +14,19 @@ const obtenerEventos = async () => {
   }
 };
 
+const crearEventoUsuario = async (data) => {
+  try {
+    const response = await axios.post(`${API_URL}/usuario`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error al crear evento de usuario:", error);
+    throw error;
+  }
+};
+
 const calendarioService = {
   obtenerEventos,
+  crearEventoUsuario,
 };
 
 export default calendarioService;

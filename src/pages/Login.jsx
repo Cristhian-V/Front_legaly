@@ -11,20 +11,20 @@ import logoEmpresa from '../image/LOGO2-02-325x217.png';
 const Login = () => {
   const [name_user, setNameUser] = useState('');
   const [password, setPassword] = useState('');
+  const [guardando, setGuardando] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Llamamos a la lógica delegada en el servicio
+      setGuardando(true);
       await authService.login(name_user, password);
-      
-      // Si no hubo error, el token ya está guardado y podemos navegar
       navigate('/dashboard'); 
     } catch (error) {
-      // Manejamos el error que el servicio lanzó
       const message = error.message || "Error en las credenciales. Revisa tu usuario o contraseña.";
       alert(message);
+    } finally {
+      setGuardando(false);
     }
   };
   return (
@@ -37,10 +37,10 @@ const Login = () => {
       {/*<div className="absolute inset-0 bg-black bg-opacity-60"></div>*/}
 
       {/* Contenedor del Cuadro de Login (Estilo Split-Screen) */}
-      <div className="relative z-10 flex w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden mx-4 h-[550px]">
+      <div className="relative z-10 flex w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden mx-4 min-h-[550px] max-h-[90vh]">
         
         {/* Mitad Izquierda: Branding y Logo (Se oculta en pantallas de celulares para ahorrar espacio) */}
-        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-[#080E21] p-12 text-center relative">
+        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-[#152844] p-12 text-center relative">
           {/* 2. Logo de la empresa */}
           <img 
             src={logoEmpresa} 
@@ -70,7 +70,7 @@ const Login = () => {
                 type="text"
                 value={name_user}
                 onChange={(e) => setNameUser(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#080E21] focus:border-transparent transition-all outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#152844] focus:border-transparent transition-all outline-none"
                 placeholder="Ej. abogado_socio"
                 required
               />
@@ -82,7 +82,7 @@ const Login = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#080E21] focus:border-transparent transition-all outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#152844] focus:border-transparent transition-all outline-none"
                 placeholder="••••••••"
                 required
               />
@@ -90,9 +90,10 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full py-3 px-4 mt-4 bg-[#0F172A] hover:bg-slate-700 text-white font-bold rounded-lg transition duration-300 shadow-md"
+              disabled={guardando}
+              className="w-full py-3 px-4 mt-4 bg-[#1E3A5F] hover:bg-slate-700 text-white font-bold rounded-lg transition duration-300 shadow-md disabled:opacity-50"
             >
-              Iniciar Sesión
+              {guardando ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
           </form>
 

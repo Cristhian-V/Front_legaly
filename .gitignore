@@ -30,3 +30,6 @@ pnpm-debug.log*
 # Archivos de sistema
 .DS_Store
 Thumbs.db
+
+# Agentes
+AGENTS.md

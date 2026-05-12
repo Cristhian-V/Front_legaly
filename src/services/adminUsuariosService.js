@@ -23,7 +23,7 @@ const crearUsuario = async (usuarioData) => {
       email: usuarioData.email,
       password: usuarioData.password,
       rol_usuario: usuarioData.rol_usuario,
-      grado_id: usuarioData.grado_id
+      grado_id: 5
     });
     return response.data;
   } catch (error) {
@@ -43,8 +43,7 @@ const modificarUsuario = async (id, usuarioData) => {
       password: usuarioData.password,
       telefono: usuarioData.telefono,
       biografia: usuarioData.biografia,
-      avatar_url: usuarioData.avatar_url,
-      grado_id: usuarioData.grado_id
+      avatar_url: usuarioData.avatar_url
     });
     return response.data;
   } catch (error) {
@@ -63,12 +62,39 @@ const eliminarUsuario = async (id) => {
   }
 }
 
+const asignarAreasUsuario = async (usuarioId, areasLegalesIds) => {
+  try {
+    const response = await axios.post(`${API_URL}/area`, {
+      usuario_id: usuarioId,
+      areas_legales_ids: areasLegalesIds
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al asignar áreas al usuario:", error);
+    throw error;
+  }
+};
+
+const removerAreaUsuario = async (usuarioId, areaLegalId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/area`, {
+      data: { usuario_id: usuarioId, area_legal_id: areaLegalId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al remover área del usuario:", error);
+    throw error;
+  }
+};
+
 
 const adminUsuariosService = {
   obtenerUsuarios,
   crearUsuario,
   modificarUsuario,
-  eliminarUsuario
+  eliminarUsuario,
+  asignarAreasUsuario,
+  removerAreaUsuario
 };
 
 export default adminUsuariosService;

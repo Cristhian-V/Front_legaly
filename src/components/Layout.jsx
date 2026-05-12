@@ -8,7 +8,9 @@ import logoAyP from '../image/LogoAyP.png';
 
 const Layout = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // Para saber en qué página estamos y pintar el botón activo
+  const location = useLocation();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [datosUsuario, setDatosUsuario] = useState({
     rol: 'Cargando...', nombre_completo: 'Abogado', avatar_url: ''
@@ -61,14 +63,20 @@ const Layout = () => {
     cargarPerfil();
   }, []);
 
+  const navigateTo = (path) => {
+    setSidebarOpen(false);
+    navigate(path);
+  };
+
   const handleLogout = () => {
+    setSidebarOpen(false);
     authService.logout();
     navigate('/login');
   };
 
   // Función para dar estilo al botón activo del menú
   const getNavStyle = (path) => {
-    const baseStyle = "w-full text-left px-4 py-3 rounded-md transition-all duration-300 font-medium flex items-center";
+    const baseStyle = "w-full text-left px-4 py-3 rounded-md transition-all duration-300 font-medium flex items-center text-lg";
     return location.pathname === path
       ? `${baseStyle} bg-slate-800 text-white shadow-inner` // Estilo Activo
       : `${baseStyle} hover:bg-slate-700 hover:text-white text-gray-300`; // Estilo Inactivo
@@ -135,30 +143,38 @@ const Layout = () => {
 
   if (cargando) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#080E21]">
+      <div className="flex h-screen items-center justify-center bg-[#152844]">
         <h2 className="text-white text-2xl animate-pulse">Cargando Legaly...</h2>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* SIDEBAR FIJO */}
-      <div className="w-64 bg-[#080E21] text-gray-300 flex flex-col shadow-xl z-20">
+    <div className="flex h-screen bg-gray-100 relative">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR – fixed off-screen on mobile, static in flex on desktop */}
+      <div className={`w-64 bg-[#152844] text-gray-300 flex flex-col shadow-xl z-30 max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:transform max-lg:transition-transform max-lg:duration-300 ${sidebarOpen ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-800 flex justify-center items-center">
           <img src={logoAyP} alt="Logo AyP" className="h-12 w-auto object-contain" />
         </div>
-        <nav className="flex-1 flex flex-col p-4 bg-[#0F172A]">
+        <nav className="flex-1 flex flex-col p-4 bg-[#1E3A5F]">
           <div className="flex-grow space-y-2">
-            <button onClick={() => navigate('/dashboard')} className={getNavStyle('/dashboard')}>Inicio</button>
-            <button onClick={() => navigate('/expedientes')} className={getNavStyle('/expedientes')}>Expedientes</button>
-            <button onClick={() => navigate('/revisiones')} className={getNavStyle('/revisiones')}>Bandeja de Revisiones</button>
-            <button onClick={() => navigate('/clientes')} className={getNavStyle('/clientes')}>Clientes</button>
-            <button onClick={() => navigate('/carpetas')} className={getNavStyle('/carpetas')}>Control Documental</button>
+            <button onClick={() => navigateTo('/dashboard')} className={getNavStyle('/dashboard')}>Inicio</button>
+            <button onClick={() => navigateTo('/expedientes')} className={getNavStyle('/expedientes')}>Expedientes</button>
+            <button onClick={() => navigateTo('/revisiones')} className={getNavStyle('/revisiones')}>Bandeja de Revisiones</button>
+            <button onClick={() => navigateTo('/clientes')} className={getNavStyle('/clientes')}>Clientes</button>
+            <button onClick={() => navigateTo('/carpetas')} className={getNavStyle('/carpetas')}>Control Documental</button>
           </div>
           <div className="pt-4 border-t border-gray-800 space-y-2">
-            <button onClick={() => navigate('/configuracion')} className={getNavStyle('/configuracion')}>Configuración</button>
-            <button onClick={handleLogout} className="w-full text-left px-4 py-3 rounded-md hover:bg-slate-700 hover:text-white transition-all text-gray-300 font-medium">Cerrar Sesión</button>
+            <button onClick={() => navigateTo('/configuracion')} className={getNavStyle('/configuracion')}>Configuración</button>
+            <button onClick={handleLogout} className="w-full text-left px-4 py-3 rounded-md hover:bg-slate-700 hover:text-white transition-all text-gray-300 font-medium text-lg">Cerrar Sesión</button>
           </div>
         </nav>
       </div>
@@ -167,18 +183,28 @@ const Layout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* HEADER FIJO */}
         <header className="bg-white shadow-sm flex justify-between items-stretch border-b h-24">
-          <div className="pl-8 flex flex-col justify-center">
+          <div className="pl-4 lg:pl-8 flex flex-col justify-center">
+            {/* Hamburger – visible only on mobile */}
+            <button
+              className="lg:hidden mb-2 text-[#152844]"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             {/* Título dinámico según la ruta */}
-            <h2 className="text-3xl font-black text-[#080E21] mb-2">
+            <h2 className="text-xl lg:text-3xl font-black text-[#152844] mb-1 lg:mb-2">
               {obtenerTituloSeccion(location.pathname).titulo}
             </h2>
-            <p className="text-sm text-gray-500">{obtenerTituloSeccion(location.pathname).descripcion}</p>
+            <p className="text-xs lg:text-sm text-gray-500">{obtenerTituloSeccion(location.pathname).descripcion}</p>
           </div>
           <div className="flex items-center">
-            <div className="flex items-center space-x-4 pr-6">
+            <div className="flex items-center space-x-4 pr-4 lg:pr-6">
               <div className="text-right">
-                <span className="text-sm text-gray-500 italic block">{datosUsuario.rol}</span>
-                <span className="font-semibold text-gray-800">{datosUsuario.nombre_completo}</span>
+                <span className="text-xs lg:text-sm text-gray-500 italic block">{datosUsuario.rol}</span>
+                <span className="font-semibold text-gray-800 text-sm lg:text-base">{datosUsuario.nombre_completo}</span>
               </div>
             </div>
 

@@ -35,6 +35,7 @@ const DetalleExpediente = () => {
   // Estado para el modal de cierre
   const [isCerrarModalOpen, setIsCerrarModalOpen] = useState(false);
   const [cargandoCierre, setCargandoCierre] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   const [formData, setFormData] = useState({});
   const [revisionData, setRevisionData] = useState({ revisor_id: '', comentarios_solicitud: '', documentos_ids: [] });
@@ -42,7 +43,7 @@ const DetalleExpediente = () => {
 
   const [listaDocumentos, setListaDocumentos] = useState([]);
 
-  // Evaluamos si el caso está cerrado basándonos en el estado general
+  // Evaluamos si el caso está pasivo basándonos en el estado general
   const estaCerrado = detalleCaso.caso?.estado === 'Cerrado';
 
   const recargarDocs = async () => {
@@ -93,16 +94,19 @@ const DetalleExpediente = () => {
   const handleGuardarEdicion = async (e) => {
     e.preventDefault();
     try {
+      setGuardando(true);
       await casosService.modificarCaso(id, formData);
       setIsEditModalOpen(false);
       inicializarPagina();
     } catch (error) { alert("Error al actualizar el caso: " + error); }
+    finally { setGuardando(false); }
   };
 
   // --- REVISIONES GLOBALES ---
   const handleSolicitarRevision = async (e) => {
     e.preventDefault();
     try {
+      setGuardando(true);
       if (+datosUsuario.id === +revisionData.revisor_id) {
         alert("El Solicitante y el Revisor no puede ser la misma persona");
       } else {
@@ -112,6 +116,7 @@ const DetalleExpediente = () => {
         inicializarPagina();
       }
     } catch (error) { alert("Error al solicitar revisión: " + error); }
+    finally { setGuardando(false); }
   };
 
   // Función para manejar los checkboxes (dentro de revisiones)
@@ -146,6 +151,7 @@ const DetalleExpediente = () => {
     if (!evaluacionData.estado_revision_id) return alert("Por favor, selecciona una decisión.");
 
     try {
+      setGuardando(true);
       const idRevision = await casosService.obtenerRevisionActiva(id);
       if (!idRevision?.id_activo) return alert("Error: No se encontró la revisión en curso.");
 
@@ -158,6 +164,8 @@ const DetalleExpediente = () => {
     } catch (error) {
       console.error(error);
       alert("Hubo un error al procesar tu respuesta.");
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -196,17 +204,17 @@ const DetalleExpediente = () => {
       // Asumiendo que 'id' es el expediente_id de la URL que requiere tu backend
       await casosService.cerrarCaso(id);
       setIsCerrarModalOpen(false);
-      alert("El caso ha sido cerrado exitosamente.");
+      alert("El caso ha sido puesto en pasivo exitosamente.");
       inicializarPagina(); // Recargamos para actualizar los badges y estados
     } catch (error) {
-      alert(error.response?.data?.error || "Error al intentar cerrar el caso.");
+      alert(error.response?.data?.error || "Error al poner el caso en pasivo.");
     } finally {
       setCargandoCierre(false);
     }
   };
 
   // --- ESTILOS ---
-  const tabStyle = (tab) => `pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${pestañaActiva === tab ? 'border-[#080E21] text-[#080E21]' : 'border-transparent text-gray-500 hover:text-gray-800'}`;
+  const tabStyle = (tab) => `pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${pestañaActiva === tab ? 'border-[#152844] text-[#152844]' : 'border-transparent text-gray-500 hover:text-gray-800'}`;
 
   // Filtro auxiliar para el dropdown del header
   const revisionesRecientes = historialCaso.historial.flatMap(g => g.eventos).filter(e => ['solicitud_revision', 'revision_completada'].includes(e.tipo)).slice(0, 4);
@@ -214,24 +222,24 @@ const DetalleExpediente = () => {
   if (cargando) return <div className="p-20 text-center animate-pulse text-gray-500">Cargando expediente...</div>;
 
   return (
-    <main className="p-8 max-w-7xl mx-auto relative">
-      <button onClick={() => navigate('/expedientes')} className="flex items-center text-gray-500 hover:text-[#080E21] mb-6 transition-colors">← Volver a Casos</button>
+    <main className="px-4 py-4 md:px-8 md:py-8 max-w-7xl mx-auto relative">
+      <button onClick={() => navigate('/expedientes')} className="flex items-center text-gray-500 hover:text-[#152844] mb-6 transition-colors">← Volver a Casos</button>
 
       {/* HEADER DEL CASO */}
       <div className="mb-8">
         <div className="flex gap-3 mb-3">
           <Badge text={detalleCaso.caso?.categoria_cliente} />
           <Badge text={detalleCaso.caso?.expediente_id} />
-          <Badge text={detalleCaso.caso?.estado} color="green" />
+          <Badge text={detalleCaso.caso?.estado === 'Cerrado' ? 'Pasivo' : detalleCaso.caso?.estado} color="green" />
         </div>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-3xl font-black text-[#080E21]">{detalleCaso.caso?.titulo} - {detalleCaso.caso?.nombre_cliente}</h1>
+          <h1 className="text-3xl font-black text-[#152844]">{detalleCaso.caso?.titulo} - {detalleCaso.caso?.nombre_cliente}</h1>
           {!estaCerrado ? (
             <div className="flex gap-3">
               <button onClick={abrirModalEdicion} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold shadow-sm">Editar</button>
 
               <div className="relative">
-                <button onClick={() => setIsAccionesOpen(!isAccionesOpen)} className="px-4 py-2 bg-[#212A3E] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors">
+                <button onClick={() => setIsAccionesOpen(!isAccionesOpen)} className="px-4 py-2 bg-[#1E3A5F] text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm flex items-center gap-2 transition-colors">
                   Acciones <span className="text-xs">▼</span>
                 </button>
                 {/* Menú Desplegable */}
@@ -289,7 +297,7 @@ const DetalleExpediente = () => {
                                 <span className="text-lg">✅</span> Revisión Completada
                               </div>
                             )}
-                            {/* BOTÓN PARA CERRAR CASO (Siempre al final del menú si no está cerrado) */}
+                             {/* BOTÓN PARA PONER CASO EN PASIVO (Siempre al final del menú si no está cerrado) */}
                             {estadoRev !== "Cerrado" && (
                               <button
                                 onClick={() => {
@@ -298,7 +306,7 @@ const DetalleExpediente = () => {
                                 }}
                                 className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors border-t border-gray-100 mt-1"
                               >
-                                <span className="text-lg">🔒</span> Finalizar Caso
+                                <span className="text-lg">🔒</span> Poner en Pasivo
                               </button>
                             )}
                           </>
@@ -312,13 +320,13 @@ const DetalleExpediente = () => {
           ) : (
             /* Badge visual para indicar que es de Solo Lectura */
             <div className="px-4 py-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-lg font-bold flex items-center gap-2">
-              <span>🔒</span> Modo Solo Lectura (Caso Cerrado)
+              <span>🔒</span> Modo Solo Lectura (Caso Pasivo)
             </div>
           )}
         </div>
       </div>
       {/* TABS SELECTOR */}
-      <div className="border-b border-gray-200 mb-8 flex gap-8">
+      <div className="border-b border-gray-200 mb-8 flex gap-8 overflow-x-auto">
         {['general', 'documentos', 'actividades', 'equipo', 'historial'].map(t => (
           <button key={t} onClick={() => setPestañaActiva(t)} className={tabStyle(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -364,7 +372,7 @@ const DetalleExpediente = () => {
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md transition">Guardar Cambios</button>
+              <button type="submit" disabled={guardando} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md transition disabled:opacity-50">{guardando ? 'Guardando...' : 'Guardar Cambios'}</button>
             </div>
           </form>
         </Modal>
@@ -427,7 +435,7 @@ const DetalleExpediente = () => {
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsRevisionModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Cancelar</button>
-              <button type="submit" className="px-6 py-2 bg-[#080E21] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition">Enviar Solicitud</button>
+              <button type="submit" disabled={guardando} className="px-6 py-2 bg-[#152844] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50">{guardando ? 'Enviando...' : 'Enviar Solicitud'}</button>
             </div>
           </form>
         </Modal>
@@ -474,14 +482,14 @@ const DetalleExpediente = () => {
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsEvaluarModalOpen(false)} className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 transition">Cancelar</button>
-              <button type="submit" disabled={!evaluacionData.estado_revision_id} className={`px-6 py-2 text-white font-bold rounded-lg shadow-md transition disabled:bg-gray-300 disabled:cursor-not-allowed ${evaluacionData.estado_revision_id === 3 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}>Confirmar Evaluación</button>
+              <button type="submit" disabled={!evaluacionData.estado_revision_id || guardando} className={`px-6 py-2 text-white font-bold rounded-lg shadow-md transition disabled:bg-gray-300 disabled:cursor-not-allowed ${evaluacionData.estado_revision_id === 3 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}>{guardando ? 'Procesando...' : 'Confirmar Evaluación'}</button>
             </div>
           </form>
         </Modal>
       )}
       {/* 4. Modal: Confirmar Cierre de Caso */}
       {isCerrarModalOpen && (
-        <Modal title="Cerrar Expediente" onClose={() => setIsCerrarModalOpen(false)}>
+        <Modal title="Poner Expediente en Pasivo" onClose={() => setIsCerrarModalOpen(false)}>
           <form onSubmit={handleCerrarCaso}>
             {/* Cuadro de advertencia llamativo pero elegante */}
             <div className="bg-red-50 border-l-4 border-red-500 p-5 rounded-r-xl mb-6">
@@ -490,7 +498,7 @@ const DetalleExpediente = () => {
                 <div>
                   <h3 className="text-red-800 font-bold text-sm mb-1">Acción Definitiva</h3>
                   <p className="text-red-700 text-xs leading-relaxed">
-                    Estás a punto de dar por finalizado este expediente. Esta acción cambiará el estado a <strong>"Cerrado"</strong> y quedará archivado en el historial. ¿Estás absolutamente seguro de que deseas proceder?
+                    Estás a punto de dar por finalizado este expediente. Esta acción cambiará el estado a <strong>"Pasivo"</strong> y quedará archivado en el historial. ¿Estás absolutamente seguro de que deseas proceder?
                   </p>
                 </div>
               </div>
@@ -517,7 +525,7 @@ const DetalleExpediente = () => {
                   </>
                 ) : (
                   <>
-                    <span>🔒</span> Sí, Cerrar Caso
+                    <span>🔒</span> Sí, Poner en Pasivo
                   </>
                 )}
               </button>

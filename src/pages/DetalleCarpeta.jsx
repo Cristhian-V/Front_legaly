@@ -16,6 +16,7 @@ const DetalleCarpeta = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const fileInputRef = useRef(null);
+  const [guardando, setGuardando] = useState(false);
 
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [docAccionActivo, setDocAccionActivo] = useState(null); // Guarda el ID del doc que estamos compartiendo/vinculando
@@ -58,6 +59,7 @@ const DetalleCarpeta = () => {
     if (!archivoSeleccionado) return alert("Selecciona un archivo.");
 
     try {
+      setGuardando(true);
       const formData = new FormData();
       formData.append('archivo', archivoSeleccionado);
 
@@ -67,6 +69,8 @@ const DetalleCarpeta = () => {
       await cargarDatos();
     } catch (error) {
       alert("Error al subir el archivo: " + error);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -81,11 +85,14 @@ const DetalleCarpeta = () => {
     e.preventDefault();
     if (usuariosSeleccionados.length === 0) return alert("Selecciona al menos un usuario.");
     try {
+      setGuardando(true);
       await carpetasService.compartirDocumento(docAccionActivo, usuariosSeleccionados);
       alert("Documento compartido exitosamente.");
       setIsShareOpen(false);
     } catch (error) {
       alert("Error al compartir el documento: " + error);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -106,11 +113,14 @@ const DetalleCarpeta = () => {
     e.preventDefault();
     if (!linkData.caso_id || !linkData.tipo_documento_id) return alert("Completa todos los campos.");
     try {
+      setGuardando(true);
       await carpetasService.vincularACaso(docAccionActivo, linkData.caso_id, linkData.tipo_documento_id);
       alert("Documento copiado al expediente exitosamente.");
       setIsLinkOpen(false);
     } catch (error) {
       alert("Error al vincular el documento: " + error);
+    } finally {
+      setGuardando(false);
     }
   };
   
@@ -253,21 +263,21 @@ const handleDescargarDocumento = async (ruta) => {
   if (cargando) return <div className="p-20 text-center animate-pulse text-gray-500">Abriendo carpeta...</div>;
 
   return (
-    <main className="p-8 max-w-7xl mx-auto">
+    <main className="px-4 py-4 md:px-8 md:py-8 max-w-7xl mx-auto">
       {/* HEADER NAVEGACIÓN */}
       <button onClick={() => navigate('/carpetas')} className="flex items-center text-gray-500 hover:text-blue-600 mb-6 font-bold text-sm transition">
         <span className="mr-2">←</span> Volver a Carpetas
       </button>
 
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-black text-[#080E21] flex items-center gap-3">
+        <h1 className="text-3xl font-black text-[#152844] flex items-center gap-3">
           <span className="text-4xl">📂</span> {carpeta}
         </h1>
-        <div className="flex gap-3">
-          <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-gray-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2">
+        <div className="flex flex-wrap gap-3">
+          <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] hover:bg-gray-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2">
             + Doc en Blanco
           </button>
-          <button onClick={() => setIsUploadOpen(true)} className="bg-[#0F172A] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition flex items-center gap-2">
+          <button onClick={() => setIsUploadOpen(true)} className="bg-[#1E3A5F] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition flex items-center gap-2">
             + Subir Archivo
           </button>
         </div>
@@ -305,7 +315,7 @@ const handleDescargarDocumento = async (ruta) => {
                         onClick={() => handleAbrirOnline(doc.id)}
                         className="text-emerald-600 font-bold text-xs hover:underline flex items-center inline-flex gap-1"
                       >
-                        <span>📝</span> Abrir
+                        <span>📝</span> Editar
                       </button>
                     )}
                     
@@ -342,7 +352,7 @@ const handleDescargarDocumento = async (ruta) => {
       {isUploadOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden">
-            <div className="bg-[#080E21] p-4 flex justify-between"><h2 className="text-white font-bold">Subir Documento</h2><button onClick={() => setIsUploadOpen(false)} className="text-white">&times;</button></div>
+            <div className="bg-[#152844] p-4 flex justify-between"><h2 className="text-white font-bold">Subir Documento</h2><button onClick={() => setIsUploadOpen(false)} className="text-white">&times;</button></div>
             <form onSubmit={handleUploadSubmit} className="p-6">
 
               <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-gray-300 p-10 text-center rounded-xl hover:bg-gray-50 cursor-pointer transition">
@@ -352,8 +362,8 @@ const handleDescargarDocumento = async (ruta) => {
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
-                <button type="button" onClick={() => setIsUploadOpen(false)} className="px-4 py-2 text-gray-500 font-bold">Cancelar</button>
-                <button type="submit" disabled={!archivoSeleccionado} className="px-6 py-2 bg-blue-600 text-white font-bold rounded shadow disabled:bg-gray-300">Subir</button>
+                <button type="button" onClick={() => setIsUploadOpen(false)} disabled={guardando} className="px-4 py-2 text-gray-500 font-bold disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={!archivoSeleccionado || guardando} className="px-6 py-2 bg-blue-600 text-white font-bold rounded shadow disabled:bg-gray-300">{guardando ? 'Subiendo...' : 'Subir'}</button>
               </div>
             </form>
           </div>
@@ -366,7 +376,7 @@ const handleDescargarDocumento = async (ruta) => {
       {isShareOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl w-full max-w-sm overflow-hidden">
-            <div className="bg-[#080E21] p-4 flex justify-between"><h2 className="text-white font-bold">Compartir Documento</h2><button onClick={() => setIsShareOpen(false)} className="text-white">&times;</button></div>
+            <div className="bg-[#152844] p-4 flex justify-between"><h2 className="text-white font-bold">Compartir Documento</h2><button onClick={() => setIsShareOpen(false)} className="text-white">&times;</button></div>
 
             <form onSubmit={handleCompartirSubmit} className="p-6">
               <p className="text-xs text-gray-500 mb-4">Selecciona los colegas con los que deseas compartir este documento.</p>
@@ -386,8 +396,8 @@ const handleDescargarDocumento = async (ruta) => {
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
-                <button type="button" onClick={() => setIsShareOpen(false)} className="px-4 py-2 text-gray-500 font-bold">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-green-600 text-white font-bold rounded shadow">Compartir</button>
+                <button type="button" onClick={() => setIsShareOpen(false)} disabled={guardando} className="px-4 py-2 text-gray-500 font-bold disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={guardando} className="px-6 py-2 bg-green-600 text-white font-bold rounded shadow disabled:opacity-50">{guardando ? 'Compartiendo...' : 'Compartir'}</button>
               </div>
             </form>
           </div>
@@ -400,7 +410,7 @@ const handleDescargarDocumento = async (ruta) => {
       {isLinkOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl w-full max-w-sm overflow-hidden">
-            <div className="bg-[#080E21] p-4 flex justify-between"><h2 className="text-white font-bold">Copiar a Expediente</h2><button onClick={() => setIsLinkOpen(false)} className="text-white">&times;</button></div>
+            <div className="bg-[#152844] p-4 flex justify-between"><h2 className="text-white font-bold">Copiar a Expediente</h2><button onClick={() => setIsLinkOpen(false)} className="text-white">&times;</button></div>
             <form onSubmit={handleVincularSubmit} className="p-6">
               <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded mb-4">Una copia de este documento se guardará en la pestaña "Documentos" del caso seleccionado.</p>
 
@@ -433,8 +443,8 @@ const handleDescargarDocumento = async (ruta) => {
               </div>
 
               <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setIsLinkOpen(false)} className="px-4 py-2 text-gray-500 font-bold">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-purple-600 text-white font-bold rounded shadow">Vincular</button>
+                <button type="button" onClick={() => setIsLinkOpen(false)} disabled={guardando} className="px-4 py-2 text-gray-500 font-bold disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={guardando} className="px-6 py-2 bg-purple-600 text-white font-bold rounded shadow disabled:opacity-50">{guardando ? 'Vinculando...' : 'Vincular'}</button>
               </div>
             </form>
           </div>
@@ -447,7 +457,7 @@ const handleDescargarDocumento = async (ruta) => {
       {isCrearDocOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden">
-            <div className="bg-[#080E21] p-4 flex justify-between"><h2 className="text-white font-bold">Crear Documento Online</h2><button onClick={() => setIsCrearDocOpen(false)} className="text-white">&times;</button></div>
+            <div className="bg-[#152844] p-4 flex justify-between"><h2 className="text-white font-bold">Crear Documento Online</h2><button onClick={() => setIsCrearDocOpen(false)} className="text-white">&times;</button></div>
             <form onSubmit={handleCrearDocBlanco} className="p-6">
               
               <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">

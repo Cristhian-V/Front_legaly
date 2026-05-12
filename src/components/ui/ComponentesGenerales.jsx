@@ -10,7 +10,7 @@ export const Badge = ({ text, color = 'blue' }) => (
 
 export const InfoBox = ({ label, value, color = 'text-gray-600' }) => (
   <div>
-    <h4 className="text-sm font-bold text-[#080E21] mb-1">{label}</h4>
+    <h4 className="text-sm font-bold text-[#152844] mb-1">{label}</h4>
     <p className={`text-sm ${color}`}>{value}</p>
   </div>
 );
@@ -27,7 +27,7 @@ export const EmptyState = ({ icon, title, description, onAction, actionText = "C
 export const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in-up">
-      <div className="bg-[#080E21] p-4 flex justify-between items-center">
+      <div className="bg-[#152844] p-4 flex justify-between items-center">
         <h2 className="text-white font-bold">{title}</h2>
         <button type="button" onClick={onClose} className="text-white text-xl">&times;</button>
       </div>

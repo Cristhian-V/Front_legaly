@@ -8,6 +8,7 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
 
   const [isEquipoModalOpen, setIsEquipoModalOpen] = useState(false);
   const [equipoSeleccionado, setEquipoSeleccionado] = useState([]);
+  const [guardando, setGuardando] = useState(false);
 
   const cargarEquipo = async () => {
     try {
@@ -33,6 +34,7 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
     }
 
     try {
+      setGuardando(true);
       await casosService.addMiembroEquipo(casoId, equipoSeleccionado);
 
       setIsEquipoModalOpen(false);
@@ -41,6 +43,8 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
 
     } catch (error) {
       alert("Error al añadir miembros: " + (error.response?.data?.error || error.message));
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -64,10 +68,10 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-wrap justify-between items-center mb-8 gap-3">
         <h3 className="text-lg font-bold">Abogados del Caso</h3>
         {!estaCerrado && (
-          <button onClick={() => setIsEquipoModalOpen(true)} className="bg-[#0F172A] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">
+          <button onClick={() => setIsEquipoModalOpen(true)} className="bg-[#1E3A5F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">
             + Añadir Colega
           </button>
         )}
@@ -167,10 +171,10 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
               </button>
               <button
                 type="submit"
-                disabled={equipoSeleccionado.length === 0}
+                disabled={equipoSeleccionado.length === 0 || guardando}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Añadir al Caso
+                {guardando ? 'Añadiendo...' : 'Añadir al Caso'}
               </button>
             </div>
           </form>

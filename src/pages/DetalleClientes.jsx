@@ -12,6 +12,7 @@ const DetalleCliente = () => {
 
   // Estados de Modales
   const [isEditClienteOpen, setIsEditClienteOpen] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   const [isContactoOpen, setIsContactoOpen] = useState(false);
 
   // Estados de Formularios
@@ -48,10 +49,12 @@ const DetalleCliente = () => {
   const handleGuardarCliente = async (e) => {
     e.preventDefault();
     try {
+      setGuardando(true);
       await clienteService.modificarCliente(id, clienteForm);
       await cargarDatos();
       setIsEditClienteOpen(false);
     } catch (error) { alert("Error al modificar cliente: " + error.message); }
+    finally { setGuardando(false); }
   };
 
   // --- LÓGICA DE CONTACTOS ---
@@ -67,6 +70,7 @@ const DetalleCliente = () => {
   const handleGuardarContacto = async (e) => {
     e.preventDefault();
     try {
+      setGuardando(true);
       // Importante: Aseguramos enviar el cliente_id para la lógica de "es_principal"
       const payload = { ...contactoForm, cliente_id: id };
 
@@ -78,6 +82,7 @@ const DetalleCliente = () => {
       await cargarDatos();
       setIsContactoOpen(false);
     } catch (error) { alert("Error al guardar contacto: " + error.message); }
+    finally { setGuardando(false); }
   };
 
   const handleEliminarContacto = async (contactoId) => {
@@ -91,7 +96,7 @@ const DetalleCliente = () => {
   if (cargando) return <div className="p-20 text-center">Cargando datos del cliente...</div>;
 
   return (
-    <main className="p-8 max-w-5xl mx-auto">
+    <main className="px-4 py-4 md:px-8 md:py-8 max-w-5xl mx-auto">
       <button onClick={() => navigate('/clientes')} className="text-gray-500 mb-6 hover:text-blue-600 font-bold text-sm">
         ← Volver a Directorio
       </button>
@@ -100,7 +105,7 @@ const DetalleCliente = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-black text-[#080E21]">{cliente.nombre_completo}</h1>
+            <h1 className="text-3xl font-black text-[#152844]">{cliente.nombre_completo}</h1>
             <p className="text-gray-500 font-mono mt-1">NIT/CI: {cliente.documento_identidad}</p>
           </div>
           <button onClick={abrirEditarCliente} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition">
@@ -118,7 +123,7 @@ const DetalleCliente = () => {
       {/* SECCIÓN: CONTACTOS */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-[#080E21]">Personal de Contacto</h2>
+          <h2 className="text-xl font-bold text-[#152844]">Personal de Contacto</h2>
           <button onClick={() => abrirModalContacto(null)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow transition">
             + Añadir Contacto
           </button>
@@ -155,7 +160,7 @@ const DetalleCliente = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
            <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden animate-fade-in-up">
              
-             <div className="bg-[#080E21] p-4 flex justify-between items-center">
+             <div className="bg-[#152844] p-4 flex justify-between items-center">
                <h2 className="text-white font-bold">Editar Información del Cliente</h2>
                <button type="button" onClick={() => setIsEditClienteOpen(false)} className="text-white text-xl leading-none">&times;</button>
              </div>
@@ -218,17 +223,19 @@ const DetalleCliente = () => {
                {/* Botones */}
                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
                  <button 
-                   type="button" 
-                   onClick={() => setIsEditClienteOpen(false)} 
-                   className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition"
+                   type="button"
+                   onClick={() => setIsEditClienteOpen(false)}
+                   disabled={guardando}
+                   className="px-5 py-2 text-gray-600 font-bold rounded-lg hover:bg-gray-100 disabled:opacity-50"
                  >
                    Cancelar
                  </button>
                  <button 
-                   type="submit" 
-                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition"
+                   type="submit"
+                   disabled={guardando}
+                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50"
                  >
-                   Guardar Cambios
+                   {guardando ? 'Guardando...' : 'Guardar Cambios'}
                  </button>
                </div>
 
@@ -241,7 +248,7 @@ const DetalleCliente = () => {
       {isContactoOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
            <div className="bg-white rounded-xl w-full max-w-md overflow-hidden">
-             <div className="bg-[#080E21] p-4 flex justify-between"><h2 className="text-white font-bold">{contactoForm.id ? 'Editar Contacto' : 'Nuevo Contacto'}</h2><button onClick={() => setIsContactoOpen(false)} className="text-white">&times;</button></div>
+             <div className="bg-[#152844] p-4 flex justify-between"><h2 className="text-white font-bold">{contactoForm.id ? 'Editar Contacto' : 'Nuevo Contacto'}</h2><button onClick={() => setIsContactoOpen(false)} className="text-white">&times;</button></div>
              <form onSubmit={handleGuardarContacto} className="p-6 grid grid-cols-1 gap-4">
                <div><label className="text-xs font-bold text-gray-700">Nombre Completo *</label><input required value={contactoForm.nombre_contacto} onChange={e => setContactoForm({...contactoForm, nombre_contacto: e.target.value})} className="w-full p-2 border rounded"/></div>
                <div><label className="text-xs font-bold text-gray-700">Cargo</label><input value={contactoForm.cargo} onChange={e => setContactoForm({...contactoForm, cargo: e.target.value})} className="w-full p-2 border rounded"/></div>
@@ -254,7 +261,7 @@ const DetalleCliente = () => {
                  <span className="text-sm font-bold text-gray-700">Marcar como Contacto Principal</span>
                </label>
                <div className="flex justify-end gap-2 mt-4">
-                  <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded">Guardar Contacto</button>
+                   <button type="submit" disabled={guardando} className="px-6 py-2 bg-blue-600 text-white font-bold rounded disabled:opacity-50">{guardando ? 'Guardando...' : 'Guardar Contacto'}</button>
                </div>
              </form>
            </div>

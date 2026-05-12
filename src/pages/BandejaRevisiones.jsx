@@ -11,6 +11,7 @@ const BandejaRevisiones = () => {
   const [casosPendientes, setCasosPendientes] = useState();
   // --- NUEVO ESTADO PARA PESTAÑAS ---
   const [pestañaActiva, setPestañaActiva] = useState('pendientes'); // 'pendientes' o 'en_revision'
+  const [evaluandoId, setEvaluandoId] = useState(null);
 
   // Funcion de cargar casos pendientes
 const cargarCasosPendientes = useCallback(async () => {
@@ -57,19 +58,18 @@ const cargarCasosPendientes = useCallback(async () => {
   // Ahora recibe el objeto 'revision' completo para poder evaluar su estado actual
   const handleEvaluar = async (revision) => {
     try {
-      // Si está pendiente (1), iniciamos la revisión en el backend
-      console.log(revision)
+      setEvaluandoId(revision.revision_id);
       if (revision.estado_id === 1) {
         const response = await casosService.revisarCaso(revision.revision_id); 
         console.log("Revisión iniciada con éxito:", response);
         navigate(`/expedientes/${response.expediente_id || revision.expediente_id}`);
       } else {
-        // Si ya está en revisión (4), solo lo redirigimos al expediente sin hacer PATCH
         navigate(`/expedientes/${revision.expediente_id}`);
       }
     } catch (error) {
-      console.error("Error al iniciar la revisión:", error);
-      alert("Hubo un problema al intentar abrir la revisión. Por favor intenta nuevamente.");
+      alert("Error al iniciar la revisión: " + error);
+    } finally {
+      setEvaluandoId(null);
     }
   };
 
@@ -87,7 +87,7 @@ const cargarCasosPendientes = useCallback(async () => {
   });
 
   return (
-    <main className="p-8 max-w-7xl mx-auto">
+    <main className="px-4 py-4 md:px-8 md:py-8 max-w-7xl mx-auto">
       {/* Contenedor de la Bandeja */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
 
@@ -95,7 +95,7 @@ const cargarCasosPendientes = useCallback(async () => {
         <div className="border-b border-gray-200 flex gap-8 px-6 pt-6 bg-gray-50/50">
           <button 
             onClick={() => setPestañaActiva('pendientes')} 
-            className={`pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${pestañaActiva === 'pendientes' ? 'border-[#080E21] text-[#080E21]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            className={`pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${pestañaActiva === 'pendientes' ? 'border-[#152844] text-[#152844]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
           >
             Pendientes de Revisión
             <span className="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">
@@ -105,7 +105,7 @@ const cargarCasosPendientes = useCallback(async () => {
           
           <button 
             onClick={() => setPestañaActiva('en_revision')} 
-            className={`pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${pestañaActiva === 'en_revision' ? 'border-[#080E21] text-[#080E21]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            className={`pb-4 px-2 font-semibold text-sm transition-colors cursor-pointer border-b-2 ${pestañaActiva === 'en_revision' ? 'border-[#152844] text-[#152844]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
           >
             En Revisión (Progreso)
             <span className="ml-2 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs">
@@ -117,7 +117,7 @@ const cargarCasosPendientes = useCallback(async () => {
         {revisionesFiltradas.length === 0 ? (
           <div className="p-16 text-center">
             <span className="text-5xl mb-4 grayscale opacity-50 block">📭</span>
-            <h3 className="text-xl font-bold text-[#080E21] mb-2">Bandeja Limpia</h3>
+            <h3 className="text-xl font-bold text-[#152844] mb-2">Bandeja Limpia</h3>
             <p className="text-gray-500">
               {pestañaActiva === 'pendientes' 
                 ? 'No tienes ninguna solicitud de revisión pendiente en este momento.' 
@@ -141,7 +141,7 @@ const cargarCasosPendientes = useCallback(async () => {
                   <tr key={index} className="hover:bg-blue-50/50 transition-colors group">
 
                     <td className="p-4">
-                      <p className="text-sm font-bold text-[#080E21]">{revision.descripcion_corta || 'Título del Caso'}</p>
+                      <p className="text-sm font-bold text-[#152844]">{revision.descripcion_corta || 'Título del Caso'}</p>
                       <p className="text-xs text-gray-500 font-mono mt-0.5">{revision.expediente_id || 'EXP-000'}</p>
                     </td>
 
@@ -162,13 +162,14 @@ const cargarCasosPendientes = useCallback(async () => {
                       {/* PASAMOS EL OBJETO COMPLETO PARA VALIDAR SU ESTADO */}
                       <button                      
                         onClick={() => handleEvaluar(revision)}
+                        disabled={evaluandoId !== null}
                         className={`${
                           pestañaActiva === 'pendientes' 
-                            ? 'bg-[#212A3E] hover:bg-slate-800' 
+                            ? 'bg-[#1E3A5F] hover:bg-slate-800' 
                             : 'bg-indigo-600 hover:bg-indigo-700'
-                        } text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition-colors`}
+                        } text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition-colors disabled:opacity-50`}
                       >
-                        {pestañaActiva === 'pendientes' ? 'Evaluar' : 'Continuar Revisión'}
+                        {evaluandoId === revision.revision_id ? 'Procesando...' : pestañaActiva === 'pendientes' ? 'Evaluar' : 'Continuar Revisión'}
                       </button>
                     </td>
                   </tr>

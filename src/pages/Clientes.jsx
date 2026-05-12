@@ -7,6 +7,7 @@ const Clientes = () => {
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   
   // Asumiendo que las categorías vienen del contexto global
   const { catalogos, recargarCatalogos } = useOutletContext() || {};
@@ -40,6 +41,7 @@ const Clientes = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setGuardando(true);
       await clienteService.crearCliente(formData);
       await cargarClientes();
       setIsModalOpen(false);
@@ -47,6 +49,8 @@ const Clientes = () => {
       setFormData({ nombre_completo: '', documento_identidad: '', correo_electronico: '', telefono: '', direccion: '', categoria_id: '' });
     } catch (error) {
       alert("Error al crear cliente: " + error.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -58,7 +62,7 @@ const Clientes = () => {
   if (cargando) return <div className="p-20 text-center text-gray-500">Cargando Clientes...</div>;
 
   return (
-    <main className="p-8 max-w-7xl mx-auto">
+    <main className="px-4 py-4 md:px-8 md:py-8 max-w-7xl mx-auto">
 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         
         {/* Contenedor del Buscador */}
@@ -78,7 +82,7 @@ const Clientes = () => {
         {/* Botón */}
         <button 
           onClick={() => setIsModalOpen(true)} 
-          className="bg-[#0F172A] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition-colors whitespace-nowrap w-full md:w-auto"
+          className="bg-[#1E3A5F] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-slate-800 transition-colors whitespace-nowrap w-full md:w-auto"
         >
           + Nuevo Cliente
         </button>
@@ -120,7 +124,7 @@ const Clientes = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden">
-            <div className="bg-[#080E21] p-4 flex justify-between"><h2 className="text-white font-bold">Nuevo Cliente</h2><button onClick={() => setIsModalOpen(false)} className="text-white">&times;</button></div>
+            <div className="bg-[#152844] p-4 flex justify-between"><h2 className="text-white font-bold">Nuevo Cliente</h2><button onClick={() => setIsModalOpen(false)} className="text-white">&times;</button></div>
             <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 gap-4">
               <div><label className="text-xs font-bold text-gray-700">Nombre / Razón Social *</label><input required name="nombre_completo" value={formData.nombre_completo} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
               <div><label className="text-xs font-bold text-gray-700">NIT o CI *</label><input required name="documento_identidad" value={formData.documento_identidad} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
@@ -138,8 +142,8 @@ const Clientes = () => {
               <div><label className="text-xs font-bold text-gray-700">Correo Electrónico</label><input type="email" name="correo_electronico" value={formData.correo_electronico} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
               <div><label className="text-xs font-bold text-gray-700">Dirección</label><input name="direccion" value={formData.direccion} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
               <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 font-bold text-gray-500">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded shadow">Guardar Cliente</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} disabled={guardando} className="px-4 py-2 font-bold text-gray-500 disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={guardando} className="px-6 py-2 bg-blue-600 text-white font-bold rounded shadow disabled:opacity-50">{guardando ? 'Guardando...' : 'Guardar Cliente'}</button>
               </div>
             </form>
           </div>

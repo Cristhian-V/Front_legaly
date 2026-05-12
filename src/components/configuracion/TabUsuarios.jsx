@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import adminUsuariosService from '../../services/adminUsuariosService';
+import userService from '../../services/userService';
 import { useOutletContext } from 'react-router-dom';
 import { Modal, Label, Input } from '../ui/ComponentesGenerales';
 
@@ -12,19 +13,22 @@ const TabUsuarios = () => {
   // --- ESTADOS DEL MODAL ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('crear'); // 'crear' | 'editar'
+  const [guardando, setGuardando] = useState(false);
 
   const [formData, setFormData] = useState({
     id: null,
     nombre_completo: '',
-    name_user: '', // Username (login)
+    name_user: '',
     email: '',
-    password: '', // Solo para creación
+    password: '',
     rol_usuario: '',
     telefono: '',
     biografia: '',
-    avatar_url: '',
-    grado_id: '' // Opcional, según tu backend
+    avatar_url: ''
   });
+
+  const [areasSeleccionadas, setAreasSeleccionadas] = useState([]);
+  const [areasUsuarios, setAreasUsuarios] = useState([]); // Cache de GET /api/user/area
 
   const cargarUsuarios = async () => {
     try {
@@ -39,8 +43,18 @@ const TabUsuarios = () => {
     }
   };
 
+  const cargarAreasUsuarios = async () => {
+    try {
+      const data = await userService.obtenerUsuariosPorArea();
+      setAreasUsuarios(data || []);
+    } catch {
+      setAreasUsuarios([]);
+    }
+  };
+
   useEffect(() => {
     cargarUsuarios();
+    cargarAreasUsuarios();
   }, []);
 
   // --- MANEJADORES DE ACCIONES ---
@@ -48,8 +62,9 @@ const TabUsuarios = () => {
     setModalMode('crear');
     setFormData({
       id: null, nombre_completo: '', name_user: '', email: '', password: '',
-      rol_usuario: '', telefono: '', biografia: '', avatar_url: '', grado_id: ''
+      rol_usuario: '', telefono: '', biografia: '', avatar_url: ''
     });
+    setAreasSeleccionadas([]);
     setIsModalOpen(true);
   };
 
@@ -60,13 +75,14 @@ const TabUsuarios = () => {
       nombre_completo: usuario.nombre_completo || '',
       name_user: usuario.nombre_usuario || '',
       email: usuario.email || '',
-      password: '', // No lo enviamos en el PUT
+      password: '',
       rol_usuario: usuario.rol_id || '',
       telefono: usuario.telefono || '',
       biografia: usuario.biografia || '',
-      avatar_url: usuario.avatar_url || '',
-      grado_id: usuario.grado_id || ''
+      avatar_url: usuario.avatar_url || ''
     });
+    const usuarioArea = areasUsuarios.find(u => +u.id === +usuario.id);
+    setAreasSeleccionadas(usuarioArea?.areas_legales?.map(a => a.id) || []);
     setIsModalOpen(true);
   };
 
@@ -74,24 +90,49 @@ const TabUsuarios = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const toggleArea = (id) => {
+    setAreasSeleccionadas(prev =>
+      prev.includes(id) ? prev.filter(aid => aid !== id) : [...prev, id]
+    );
+  };
+
   const handleGuardar = async (e) => {
     e.preventDefault();
     try {
+      setGuardando(true);
       if (modalMode === 'crear') {
-        // Enviar todo incluyendo password
-        await adminUsuariosService.crearUsuario(formData);
+        const res = await adminUsuariosService.crearUsuario(formData);
+        const nuevoId = res.user?.id;
+        if (nuevoId && areasSeleccionadas.length > 0) {
+          await adminUsuariosService.asignarAreasUsuario(nuevoId, areasSeleccionadas);
+        }
       } else {
-        // No enviamos el password al editar, extraemos el ID
         const { id, ...datosAEditar } = formData;
         await adminUsuariosService.modificarUsuario(id, datosAEditar);
+
+        const usuarioArea = areasUsuarios.find(u => +u.id === +id);
+        const areasActuales = usuarioArea?.areas_legales?.map(a => a.id) || [];
+
+        const areasAAgregar = areasSeleccionadas.filter(aid => !areasActuales.includes(aid));
+        if (areasAAgregar.length > 0) {
+          await adminUsuariosService.asignarAreasUsuario(id, areasAAgregar);
+        }
+
+        const areasARemover = areasActuales.filter(aid => !areasSeleccionadas.includes(aid));
+        for (const areaId of areasARemover) {
+          await adminUsuariosService.removerAreaUsuario(id, areaId);
+        }
       }
       await cargarUsuarios();
+      await cargarAreasUsuarios();
       await recargarPerfil()
       setIsModalOpen(false);
       alert(`Usuario ${modalMode === 'crear' ? 'creado' : 'actualizado'} exitosamente.`);
     } catch (error) {
       alert(`Error al ${modalMode} el usuario.`);
       console.error(error);
+    } finally {
+      setGuardando(false);
     }
   };
   const handleInputChange = (e) => {
@@ -139,7 +180,7 @@ const TabUsuarios = () => {
         {esAdminGeneral && (
           <button
             onClick={abrirModalCrear}
-            className="bg-[#0F172A] hover:bg-slate-800 text-white px-5 py-2 rounded-lg font-bold shadow transition flex items-center gap-2"
+            className="bg-[#1E3A5F] hover:bg-slate-800 text-white px-5 py-2 rounded-lg font-bold shadow transition flex items-center gap-2"
           >
             + Nuevo Usuario
           </button>
@@ -271,24 +312,6 @@ const TabUsuarios = () => {
                 />
               </div>
 
-              {/* 6. Grado Académico (RESTRINGIDO) */}
-              <div>
-                <Label text="Grado Académico *" />
-                <select
-                  name="grado_id"
-                  required
-                  disabled={!esAdminGeneral}
-                  value={formData.grado_id}
-                  onChange={handleInputChange}
-                  className={`w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 ${!esAdminGeneral ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''}`}
-                >
-                  <option value="">Seleccionar...</option>
-                  {catalogos?.catalogos?.grados_academicos?.map((grado, i) => (
-                    <option key={i} value={grado.id}>{grado.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
               {/* 7. Teléfono (SOLO VISIBLE AL EDITAR) */}
               {modalMode === 'editar' && (
                 <div>
@@ -313,20 +336,48 @@ const TabUsuarios = () => {
               </div>
             )}
 
+            {/* 9. Áreas Legales */}
+            <div className="mb-4">
+              <Label text="Áreas Legales Asignadas" />
+              <p className="text-[11px] text-gray-500 mb-2">Selecciona las áreas legales a las que pertenece este usuario.</p>
+              <div className="border rounded-lg max-h-48 overflow-y-auto bg-gray-50/50 p-2 space-y-1">
+                {catalogos?.catalogos?.area_legal?.length > 0 ? (
+                  catalogos.catalogos.area_legal.map(area => (
+                    <label
+                      key={area.id}
+                      className="flex items-center gap-3 p-2 rounded border border-transparent hover:bg-white hover:border-gray-200 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={areasSeleccionadas.includes(area.id)}
+                        onChange={() => toggleArea(area.id)}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-semibold text-gray-700">{area.nombre}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">No hay áreas legales registradas.</p>
+                )}
+              </div>
+            </div>
+
             {/* BOTONES DE ACCIÓN */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition"
+                disabled={guardando}
+                className="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition"
+                disabled={guardando}
+                className="px-6 py-2 bg-[#1E3A5F] hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition disabled:opacity-50"
               >
-                {modalMode === 'crear' ? 'Registrar Usuario' : 'Guardar Cambios'}
+                {guardando ? 'Guardando...' : modalMode === 'crear' ? 'Registrar Usuario' : 'Guardar Cambios'}
               </button>
             </div>
           </form>
