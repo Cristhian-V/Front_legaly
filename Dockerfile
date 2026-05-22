@@ -4,6 +4,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+
+# --- AQUÍ INYECTAMOS LA VARIABLE ANTES DE COMPILAR ---
+ARG VITE_API_URL
+RUN echo "VITE_API_URL=$VITE_API_URL" > .env
+
 RUN npm run build
 
 # Etapa 2: Servidor de producción
