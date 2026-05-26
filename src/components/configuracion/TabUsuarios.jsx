@@ -100,29 +100,37 @@ const TabUsuarios = () => {
     e.preventDefault();
     try {
       setGuardando(true);
+
+      let usuarioId = formData.id;
+
       if (modalMode === 'crear') {
-        const res = await adminUsuariosService.crearUsuario(formData);
-        const nuevoId = res.user?.id;
-        if (nuevoId && areasSeleccionadas.length > 0) {
-          await adminUsuariosService.asignarAreasUsuario(nuevoId, areasSeleccionadas);
-        }
+        await adminUsuariosService.crearUsuario(formData);
+        // Recargamos la lista de usuarios para obtener el ID real del recién creado
+        const data = await adminUsuariosService.obtenerUsuarios();
+        const usuarios = data.user || data || [];
+        const nuevoUsuario = usuarios.find(u => u.nombre_usuario === formData.name_user);
+        usuarioId = nuevoUsuario?.id;
+        console.log('Usuario creado, ID encontrado en lista:', usuarioId);
       } else {
         const { id, ...datosAEditar } = formData;
         await adminUsuariosService.modificarUsuario(id, datosAEditar);
+      }
 
-        const usuarioArea = areasUsuarios.find(u => +u.id === +id);
+      if (usuarioId) {
+        const usuarioArea = areasUsuarios.find(u => +u.id === +usuarioId);
         const areasActuales = usuarioArea?.areas_legales?.map(a => a.id) || [];
 
         const areasAAgregar = areasSeleccionadas.filter(aid => !areasActuales.includes(aid));
         if (areasAAgregar.length > 0) {
-          await adminUsuariosService.asignarAreasUsuario(id, areasAAgregar);
+          await adminUsuariosService.asignarAreasUsuario(usuarioId, areasAAgregar);
         }
 
         const areasARemover = areasActuales.filter(aid => !areasSeleccionadas.includes(aid));
         for (const areaId of areasARemover) {
-          await adminUsuariosService.removerAreaUsuario(id, areaId);
+          await adminUsuariosService.removerAreaUsuario(usuarioId, areaId);
         }
       }
+
       await cargarUsuarios();
       await cargarAreasUsuarios();
       await recargarPerfil()
@@ -336,7 +344,8 @@ const TabUsuarios = () => {
               </div>
             )}
 
-            {/* 9. Áreas Legales */}
+            {/* 9. Áreas Legales (solo Admin) */}
+            {esAdminGeneral && (
             <div className="mb-4">
               <Label text="Áreas Legales Asignadas" />
               <p className="text-[11px] text-gray-500 mb-2">Selecciona las áreas legales a las que pertenece este usuario.</p>
@@ -361,6 +370,7 @@ const TabUsuarios = () => {
                 )}
               </div>
             </div>
+            )}
 
             {/* BOTONES DE ACCIÓN */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
