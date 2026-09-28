@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import casosService from '../../services/casosService';
+import userService from '../../services/userService';
 import { Modal, Label } from '../ui/ComponentesGenerales';
 
-const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
+const TabEquipo = ({ casoId, catalogos, estaCerrado, areaLegalId }) => {
   const [equipoCaso, setEquipoCaso] = useState({ equipo: [] });
   const [cargando, setCargando] = useState(true);
 
   const [isEquipoModalOpen, setIsEquipoModalOpen] = useState(false);
   const [equipoSeleccionado, setEquipoSeleccionado] = useState([]);
   const [guardando, setGuardando] = useState(false);
+  const [usuariosConArea, setUsuariosConArea] = useState([]);
 
   const cargarEquipo = async () => {
     try {
@@ -25,6 +27,16 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
   useEffect(() => {
     if (casoId) cargarEquipo();
   }, [casoId]);
+
+  // Cargamos los usuarios con sus áreas para priorizar a los del área del caso
+  useEffect(() => {
+    if (!areaLegalId) return;
+    let activo = true;
+    userService.obtenerUsuariosPorArea()
+      .then((data) => { if (activo) setUsuariosConArea(data || []); })
+      .catch(() => { if (activo) setUsuariosConArea([]); });
+    return () => { activo = false; };
+  }, [areaLegalId]);
 
   const handleAddMiembro = async (e) => {
     e.preventDefault();
@@ -65,6 +77,22 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
   };
 
   if (cargando) return <div className="py-10 text-center text-gray-500 animate-pulse">Cargando equipo...</div>;
+
+  // Ordena los candidatos: primero los que comparten el área legal del caso
+  const usuariosCandidatos = (() => {
+    const base = catalogos?.usuarios || [];
+    if (!areaLegalId) return base;
+
+    const idsMismaArea = new Set(
+      usuariosConArea
+        .filter((u) => u.areas_legales?.some((a) => Number(a.id) === Number(areaLegalId)))
+        .map((u) => u.id),
+    );
+
+    return [...base].sort(
+      (a, b) => (idsMismaArea.has(a.id) ? 0 : 1) - (idsMismaArea.has(b.id) ? 0 : 1),
+    );
+  })();
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
@@ -134,7 +162,7 @@ const TabEquipo = ({ casoId, catalogos, estaCerrado }) => {
               <p className="text-[11px] text-gray-500 mb-2">Selecciona uno o más abogados para unirse al expediente.</p>
 
               <div className="border rounded-lg h-48 overflow-y-auto bg-gray-50 p-2 space-y-1 shadow-inner">
-                {catalogos?.usuarios?.map((abogado) => {
+                {usuariosCandidatos.map((abogado) => {
                   const yaEsMiembro = equipoCaso?.equipo?.some(miembro => miembro.id === abogado.id);
 
                   return (

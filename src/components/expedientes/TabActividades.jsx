@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import eventosService from '../../services/eventoServise';
+import catalogosAdminService from '../../services/catalogosAdminService';
+import ParticipantesEvento from '../ParticipantesEvento';
 
 const TabActividades = ({ casoId, estaCerrado }) => {
-  const { catalogos } = useOutletContext() || {};
+  const { catalogos, datosUsuario, recargarCatalogos } = useOutletContext() || {};
   const [eventos, setEventos] = useState([]);
   const [cargando, setCargando] = useState(true);
 
@@ -15,8 +17,12 @@ const TabActividades = ({ casoId, estaCerrado }) => {
     titulo: '',
     descripcion: '',
     fecha_hora: '',
-    tipo_evento_id: ''
+    tipo_evento_id: '',
+    modalidad: ''
   });
+
+  // Creación rápida de tipos de evento desde el formulario de actividad
+  const [nuevoTipo, setNuevoTipo] = useState({ abierto: false, nombre: '', color: '#3b82f6' });
 
   const cargarEventos = async () => {
     if (!casoId) return;
@@ -43,7 +49,7 @@ const TabActividades = ({ casoId, estaCerrado }) => {
   const limpiarFormulario = () => {
     setModoEdicion(false);
     setEventoActivoId(null);
-    setFormData({ titulo: '', descripcion: '', fecha_hora: '', tipo_evento_id: '' });
+    setFormData({ titulo: '', descripcion: '', fecha_hora: '', tipo_evento_id: '', modalidad: '' });
   };
 
   const handleEditar = (evento) => {
@@ -57,7 +63,8 @@ const TabActividades = ({ casoId, estaCerrado }) => {
       titulo: evento.titulo || '',
       descripcion: evento.descripcion || '',
       fecha_hora: fechaFormateada,
-      tipo_evento_id: evento.tipo_evento_id || ''
+      tipo_evento_id: evento.tipo_evento_id || '',
+      modalidad: evento.modalidad || ''
     });
   };
 
@@ -79,6 +86,40 @@ const TabActividades = ({ casoId, estaCerrado }) => {
       alert("Error al guardar la actividad: " + error);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const tiposPropios = (catalogos?.catalogos?.tipos_evento || []).filter(
+    (tipo) => tipo.creado_por_id && +tipo.creado_por_id === +datosUsuario?.id
+  );
+
+  const handleCrearTipo = async () => {
+    if (!nuevoTipo.nombre.trim()) return;
+    try {
+      const res = await catalogosAdminService.crearTipoEvento({
+        nombre: nuevoTipo.nombre.trim(),
+        color: nuevoTipo.color,
+        activo: true,
+      });
+      const nuevoId = res?.data?.id;
+      await recargarCatalogos();
+      if (nuevoId) setFormData((prev) => ({ ...prev, tipo_evento_id: nuevoId }));
+      setNuevoTipo({ abierto: false, nombre: '', color: '#3b82f6' });
+    } catch (error) {
+      alert(error.response?.data?.error || 'No se pudo crear el tipo de evento.');
+    }
+  };
+
+  const handleEliminarTipo = async (id, nombre) => {
+    if (!window.confirm(`¿Eliminar el tipo "${nombre}"?`)) return;
+    try {
+      await catalogosAdminService.eliminarTipoEvento(id);
+      await recargarCatalogos();
+      if (+formData.tipo_evento_id === +id) {
+        setFormData((prev) => ({ ...prev, tipo_evento_id: '' }));
+      }
+    } catch (error) {
+      alert(error.response?.data?.error || 'No se pudo eliminar el tipo de evento.');
     }
   };
 
@@ -156,6 +197,17 @@ const TabActividades = ({ casoId, estaCerrado }) => {
                       Tipo Evento :  {evento.tipo_evento}
                     </span>
                   )}
+                  {evento.modalidad && (
+                    <span className="inline-block mt-3 ml-2 px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase rounded">
+                      Modalidad :  {evento.modalidad}
+                    </span>
+                  )}
+
+                  <ParticipantesEvento
+                    tipoEvento="caso"
+                    eventoId={evento.evento_id}
+                    usuarioActualId={datosUsuario?.id}
+                  />
                 </div>
               </div>
             ))}
@@ -191,16 +243,78 @@ const TabActividades = ({ casoId, estaCerrado }) => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">Tipo de Evento *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-gray-700">Tipo de Evento *</label>
+                  <button
+                    type="button"
+                    onClick={() => setNuevoTipo((prev) => ({ ...prev, abierto: !prev.abierto }))}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800"
+                  >
+                    {nuevoTipo.abierto ? 'Cancelar' : '+ Crear tipo'}
+                  </button>
+                </div>
                 <select
                   required name="tipo_evento_id" value={formData.tipo_evento_id} onChange={handleChange}
                   className="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Seleccione...</option>
-                  {/* Asegúrate de que este arreglo coincida con tu estructura de catálogos */}
                   {catalogos?.catalogos?.tipos_evento?.map(t => (
                     <option key={t.id} value={t.id}>{t.nombre}</option>
                   ))}
+                </select>
+                {nuevoTipo.abierto && (
+                  <div className="mt-2 flex items-center gap-2 bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                    <input
+                      type="text"
+                      value={nuevoTipo.nombre}
+                      onChange={(e) => setNuevoTipo((prev) => ({ ...prev, nombre: e.target.value }))}
+                      placeholder="Nombre del nuevo tipo"
+                      className="flex-1 p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="color"
+                      value={nuevoTipo.color}
+                      onChange={(e) => setNuevoTipo((prev) => ({ ...prev, color: e.target.value }))}
+                      className="w-9 h-9 rounded border border-gray-300 cursor-pointer p-0.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCrearTipo}
+                      className="px-3 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                )}
+                {tiposPropios.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-[10px] text-gray-400 font-semibold self-center mr-1">Mis tipos:</span>
+                    {tiposPropios.map((tipo) => (
+                      <span key={tipo.id} className="inline-flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                        {tipo.nombre}
+                        <button
+                          type="button"
+                          onClick={() => handleEliminarTipo(tipo.id, tipo.nombre)}
+                          className="text-red-400 hover:text-red-600 font-bold"
+                          title="Eliminar tipo"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Modalidad *</label>
+                <select
+                  required name="modalidad" value={formData.modalidad} onChange={handleChange}
+                  className="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleccione...</option>
+                  <option value="virtual">Virtual</option>
+                  <option value="presencial">Presencial</option>
                 </select>
               </div>
 

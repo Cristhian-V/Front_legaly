@@ -11,6 +11,11 @@ const LISTA_CATALOGOS = [
 ];
 
 const TabCatalogos = ({datosUsuario}) => {
+  const esAdmin = datosUsuario?.rol === 'Abogado Socio';
+  const catalogosVisibles = esAdmin
+    ? LISTA_CATALOGOS
+    : LISTA_CATALOGOS.filter((cat) => cat.id === 'tipos-evento');
+
   const [catalogoActivo, setCatalogoActivo] = useState(LISTA_CATALOGOS[0]);
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -28,10 +33,21 @@ const TabCatalogos = ({datosUsuario}) => {
   const usaTitulo = catalogoActivo.id === 'grados';
   const usaColor = catalogoActivo.id === 'tipos-evento';
   const mostrarColumnaExtra = usaCodigo || usaTitulo || usaColor;
+  const esTiposEvento = catalogoActivo.id === 'tipos-evento';
+  const totalColumnas = 4 + (mostrarColumnaExtra ? 1 : 0) + (esTiposEvento ? 1 : 0);
+  const puedeGestionar = (reg) =>
+    esAdmin || (reg.creado_por_id && +reg.creado_por_id === +datosUsuario?.id);
 
   useEffect(() => {
     cargarDatosCatalogo(catalogoActivo.id);
   }, [catalogoActivo]);
+
+  useEffect(() => {
+    if (!esAdmin) {
+      const tipoEvento = LISTA_CATALOGOS.find((cat) => cat.id === 'tipos-evento');
+      if (tipoEvento) setCatalogoActivo(tipoEvento);
+    }
+  }, [esAdmin]);
 
   const cargarDatosCatalogo = async (catalogoId) => {
     try {
@@ -106,8 +122,6 @@ const TabCatalogos = ({datosUsuario}) => {
       await cargarDatosCatalogo(catalogoActivo.id); 
     } catch (error) { alert("Error al activar: " + error); }
   };
-  console.log(datosUsuario)
-  if (datosUsuario?.rol === 'Abogado Socio') {
   return (
     <div className="flex flex-col md:flex-row gap-8">
       
@@ -115,7 +129,7 @@ const TabCatalogos = ({datosUsuario}) => {
       <div className="w-full md:w-64 flex-shrink-0">
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">Tablas Maestras</h3>
         <div className="flex flex-col gap-1">
-          {LISTA_CATALOGOS.map((cat) => (
+          {catalogosVisibles.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setCatalogoActivo(cat)}
@@ -167,6 +181,8 @@ const TabCatalogos = ({datosUsuario}) => {
                     </th>
                   )}
 
+                  {esTiposEvento && <th className="p-4">Autor</th>}
+
                   <th className="p-4 text-center">Estado</th>
                   <th className="p-4 text-right rounded-tr-lg">Acciones</th>
                 </tr>
@@ -174,7 +190,7 @@ const TabCatalogos = ({datosUsuario}) => {
               <tbody className="divide-y divide-gray-100">
                 {registros.length === 0 ? (
                   <tr>
-                    <td colSpan={mostrarColumnaExtra ? 5 : 4} className="py-12 text-center text-gray-400">
+                    <td colSpan={totalColumnas} className="py-12 text-center text-gray-400">
                       No hay registros en este catálogo.
                     </td>
                   </tr>
@@ -197,29 +213,39 @@ const TabCatalogos = ({datosUsuario}) => {
                         </td>
                       )}
 
+                      {esTiposEvento && (
+                        <td className="p-4 text-sm text-gray-600">{reg.creado_por_nombre || 'Global'}</td>
+                      )}
+
                       <td className="p-4 text-center">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${reg.activo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {reg.activo !== false ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <button onClick={() => abrirModalEditar(reg)} className="text-blue-600 font-bold text-xs hover:underline mr-4">
-                          Editar
-                        </button>
-                        {reg.activo !== false ? (
-                          <button 
-                            onClick={() => handleDesactivar(reg.id, reg.nombre)} 
-                            className="text-red-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
-                          >
-                            Desactivar
-                          </button>
+                        {puedeGestionar(reg) ? (
+                          <>
+                            <button onClick={() => abrirModalEditar(reg)} className="text-blue-600 font-bold text-xs hover:underline mr-4">
+                              Editar
+                            </button>
+                            {reg.activo !== false ? (
+                              <button 
+                                onClick={() => handleDesactivar(reg.id, reg.nombre)} 
+                                className="text-red-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
+                              >
+                                Desactivar
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleActivar(reg.id, reg.nombre)} 
+                                className="text-green-600 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
+                              >
+                                Habilitar
+                              </button>
+                            )}
+                          </>
                         ) : (
-                          <button 
-                            onClick={() => handleActivar(reg.id, reg.nombre)} 
-                            className="text-green-600 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
-                          >
-                            Habilitar
-                          </button>
+                          <span className="text-xs text-gray-400">—</span>
                         )}
                       </td>
                     </tr>
@@ -292,6 +318,5 @@ const TabCatalogos = ({datosUsuario}) => {
     </div>
   );
 };
-}
 
 export default TabCatalogos;

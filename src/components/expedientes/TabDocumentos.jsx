@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import docsService from '../../services/docsService';
+import citesService from '../../services/citesService';
 import { EmptyState, Modal, Label } from '../ui/ComponentesGenerales';
 import wopiDocServices from '../../services/wopiDocService';
 
@@ -16,6 +17,19 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
   // Estados para Documento en Blanco (Online)
   const [isCrearDocOpen, setIsCrearDocOpen] = useState(false);
   const [nuevoDocData, setNuevoDocData] = useState({ nombreArchivo: '', tipoPlantilla: 'word', tipoDocumento: '' });
+
+  // Estados para CITE
+  const [isCrearCiteOpen, setIsCrearCiteOpen] = useState(false);
+  const [citeData, setCiteData] = useState({ via: 'correo', ref: '', destinatario: '', cargo_institucion: '' });
+
+  // Buscador por nombre
+  const [busqueda, setBusqueda] = useState('');
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setBusquedaDebounced(busqueda), 250);
+    return () => clearTimeout(t);
+  }, [busqueda]);
 
   const cargarDocumentos = async () => {
     try {
@@ -103,6 +117,22 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
     finally { setGuardando(false); }
   };
 
+  const handleCrearCite = async (e) => {
+    e.preventDefault();
+    try {
+      setGuardando(true);
+      const res = await citesService.crearCiteExpediente(casoId, citeData);
+      setIsCrearCiteOpen(false);
+      setCiteData({ via: 'correo', ref: '', destinatario: '', cargo_institucion: '' });
+      await cargarDocumentos();
+      await recargarDocumentos();
+      if (window.confirm(`CITE ${res.numero} creado. ¿Continuar con la edición ahora?`)) {
+        handleAbrirOnline(res.documentoId);
+      }
+    } catch (error) { alert(error.response?.data?.error || "Error al crear el CITE."); }
+    finally { setGuardando(false); }
+  };
+
   // --- HELPERS ---
   const getFileIcon = (extension) => {
     const ext = extension?.toLowerCase().replace('.', '') || '';
@@ -110,22 +140,46 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
     return iconos[ext] || '📄';
   };
 
+  const normalizar = (texto) =>
+    (texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  const documentosFiltrados = (documentos.documentacion || []).filter((doc) =>
+    normalizar(doc.nombre).includes(normalizar(busquedaDebounced)),
+  );
+
   if (cargando) return <div className="py-10 text-center text-gray-500 animate-pulse">Cargando documentos...</div>;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
         <h3 className="text-lg font-bold">Documentos del Expediente</h3>
-        {!estaCerrado && (
-          <div className="flex flex-wrap gap-3">
-            <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ Doc en Blanco</button>
-            <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#1E3A5F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">+ Subir Documento</button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {documentos.documentacion?.length > 0 && (
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre..."
+              className="p-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56"
+            />
+          )}
+          {!estaCerrado && (
+            <>
+              <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ Doc en Blanco</button>
+              <button onClick={() => setIsCrearCiteOpen(true)} className="bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">+ CITE</button>
+              <button onClick={() => setIsUploadModalOpen(true)} className="bg-[#1E3A5F] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 transition">+ Subir Documento</button>
+            </>
+          )}
+        </div>
       </div>
 
       {!documentos.documentacion?.length ? (
         <EmptyState icon="📄" title="Sin documentos" description="Sube la carátula como primer archivo." onAction={() => setIsUploadModalOpen(true)} />
+      ) : documentosFiltrados.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+          <span className="text-3xl block mb-2">🔍</span>
+          <p className="text-gray-500 font-medium">No se encontraron documentos con “{busquedaDebounced}”.</p>
+        </div>
       ) : (
         <div className="overflow-x-auto border rounded-lg">
           <table className="w-full text-left">
@@ -137,7 +191,7 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
               </tr>
             </thead>
             <tbody className="divide-y">
-              {documentos.documentacion.map((doc) => (
+              {documentosFiltrados.map((doc) => (
                 <tr
                   key={doc.id}
                   className={`group transition-colors border-l-4 ${doc.solicitud_revision
@@ -226,6 +280,40 @@ const TabDocumentos = ({ casoId, datosUsuario, estaCerrado, recargarDocumentos }
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <button type="button" onClick={() => setIsCrearDocOpen(false)} disabled={guardando} className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 disabled:opacity-50">Cancelar</button>
               <button type="submit" disabled={guardando} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-md disabled:opacity-50">{guardando ? 'Creando...' : 'Crear y Guardar'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* 3. Modal Crear CITE */}
+      {isCrearCiteOpen && (
+        <Modal title="Crear CITE" onClose={() => setIsCrearCiteOpen(false)}>
+          <form onSubmit={handleCrearCite}>
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6 text-sm text-blue-800">
+              Se generará la carta con la cabecera y el número correlativo. Si dejas el destinatario vacío, se usará el <strong>contacto principal del cliente</strong>.
+            </div>
+            <div className="mb-4">
+              <Label text="VIA *" />
+              <select required value={citeData.via} onChange={(e) => setCiteData({ ...citeData, via: e.target.value })} className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="correo">Correo</option>
+                <option value="entrega física">Entrega física</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <Label text="REF. (asunto)" />
+              <input type="text" value={citeData.ref} onChange={(e) => setCiteData({ ...citeData, ref: e.target.value })} placeholder="Asunto de la comunicación" className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="mb-4">
+              <Label text="Destinatario" />
+              <input type="text" value={citeData.destinatario} onChange={(e) => setCiteData({ ...citeData, destinatario: e.target.value })} placeholder="Contacto principal del cliente" className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="mb-4">
+              <Label text="Cargo / Institución" />
+              <input type="text" value={citeData.cargo_institucion} onChange={(e) => setCiteData({ ...citeData, cargo_institucion: e.target.value })} placeholder="[Cargo / Institución]" className="w-full p-2.5 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button type="button" onClick={() => setIsCrearCiteOpen(false)} disabled={guardando} className="px-5 py-2 text-gray-600 font-bold rounded hover:bg-gray-100 disabled:opacity-50">Cancelar</button>
+              <button type="submit" disabled={guardando} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-md disabled:opacity-50">{guardando ? 'Creando...' : 'Crear CITE'}</button>
             </div>
           </form>
         </Modal>

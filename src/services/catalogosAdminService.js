@@ -24,6 +24,14 @@ const catalogosAdminService = {
     // Apuntamos a la nueva ruta con /activar
     const response = await axios.put(`${API_URL}/${catalogo}/${id}/activar`, {}, { withCredentials: true });
     return response.data;
+  },
+  crearTipoEvento: async (data) => {
+    const response = await axios.post(`${API_URL}/tipos-evento`, data, { withCredentials: true });
+    return response.data;
+  },
+  eliminarTipoEvento: async (id) => {
+    const response = await axios.delete(`${API_URL}/tipos-evento/${id}`, { withCredentials: true });
+    return response.data;
   }
 };
 

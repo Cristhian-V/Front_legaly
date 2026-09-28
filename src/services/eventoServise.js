@@ -42,11 +42,35 @@ const eliminarEvento = async (id) => {
   }
 };
 
+const obtenerParticipantes = async (tipoEvento, eventoId) => {
+  try {
+    const response = await axios.get(`${API_URL}/participantes`, {
+      params: { tipo_evento: tipoEvento, evento_id: eventoId },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener los participantes del evento:", error);
+    throw error;
+  }
+};
+
+const responderAsistencia = async (data) => {
+  try {
+    const response = await axios.put(`${API_URL}/asistencia`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error al registrar la asistencia:", error);
+    throw error;
+  }
+};
+
 const eventosService = {
   obtenerEventosPorCaso,
   crearEvento,
   modificarEvento,
   eliminarEvento,
+  obtenerParticipantes,
+  responderAsistencia,
 };
 
 export default eventosService;

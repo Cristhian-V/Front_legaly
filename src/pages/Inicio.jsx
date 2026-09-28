@@ -5,6 +5,8 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import authService from '../services/authService';
 import userService from '../services/userService';
 import calendarioService from '../services/calendarioService';
+import catalogosAdminService from '../services/catalogosAdminService';
+import ParticipantesEvento from '../components/ParticipantesEvento';
 
 // Importación de imágenes 
 import iconCasos from '../image/IconCasos.png';
@@ -18,7 +20,7 @@ const Inicio = () => {
   const [datosUsuario, setDatosUsuario] = useState({});
   const [eventos, setEventos] = useState([]); 
   const [cargando, setCargando] = useState(true);
-  const { casosPendientes, catalogos, datosUsuario: usuarioPerfil } = useOutletContext();
+  const { casosPendientes, catalogos, datosUsuario: usuarioPerfil, recargarCatalogos } = useOutletContext();
 
   // ESTADOS DEL CALENDARIO
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
@@ -31,9 +33,13 @@ const Inicio = () => {
     titulo: '',
     fecha_hora: '',
     tipo_evento_id: '',
+    modalidad: '',
     descripcion: '',
     participantes_ids: []
   });
+
+  // Creación rápida de tipos de evento desde el propio modal
+  const [nuevoTipo, setNuevoTipo] = useState({ abierto: false, nombre: '', color: '#3b82f6' });
 
   const autenticado = async () => {
     const esAuth = await authService.isAuthenticated();
@@ -101,6 +107,7 @@ const Inicio = () => {
       titulo: '',
       fecha_hora: '',
       tipo_evento_id: '',
+      modalidad: '',
       descripcion: '',
       participantes_ids: []
     });
@@ -163,10 +170,44 @@ const Inicio = () => {
     return Object.values(mapa);
   };
 
+  const tiposPropios = (catalogos?.catalogos?.tipos_evento || []).filter(
+    (tipo) => tipo.creado_por_id && +tipo.creado_por_id === +usuarioPerfil?.id
+  );
+
+  const handleCrearTipo = async () => {
+    if (!nuevoTipo.nombre.trim()) return;
+    try {
+      const res = await catalogosAdminService.crearTipoEvento({
+        nombre: nuevoTipo.nombre.trim(),
+        color: nuevoTipo.color,
+        activo: true,
+      });
+      const nuevoId = res?.data?.id;
+      await recargarCatalogos();
+      if (nuevoId) setFormData((prev) => ({ ...prev, tipo_evento_id: nuevoId }));
+      setNuevoTipo({ abierto: false, nombre: '', color: '#3b82f6' });
+    } catch (error) {
+      alert(error.response?.data?.error || 'No se pudo crear el tipo de evento.');
+    }
+  };
+
+  const handleEliminarTipo = async (id, nombre) => {
+    if (!window.confirm(`¿Eliminar el tipo "${nombre}"?`)) return;
+    try {
+      await catalogosAdminService.eliminarTipoEvento(id);
+      await recargarCatalogos();
+      if (+formData.tipo_evento_id === +id) {
+        setFormData((prev) => ({ ...prev, tipo_evento_id: '' }));
+      }
+    } catch (error) {
+      alert(error.response?.data?.error || 'No se pudo eliminar el tipo de evento.');
+    }
+  };
+
   const handleCrearEvento = async (e) => {
     e.preventDefault();
-    if (!formData.titulo || !formData.fecha_hora || !formData.tipo_evento_id) {
-      alert("Completa los campos obligatorios: Título, Fecha/Hora y Tipo de Evento.");
+    if (!formData.titulo || !formData.fecha_hora || !formData.tipo_evento_id || !formData.modalidad) {
+      alert("Completa los campos obligatorios: Título, Fecha/Hora, Tipo de Evento y Modalidad.");
       return;
     }
     try {
@@ -276,6 +317,11 @@ const Inicio = () => {
                           <span style={{ backgroundColor: col.dotBg }} className="w-1 h-1 rounded-full flex-shrink-0"></span>
                           <span className="font-semibold text-gray-500">{formatearHora(ev.fecha_hora)}</span>
                           <span style={{ color: col.textColor }} className="truncate">{ev.titulo}</span>
+                          {ev.modalidad && (
+                            <span className="text-[8px] font-bold text-gray-400 uppercase flex-shrink-0">
+                              {ev.modalidad === 'virtual' ? 'Virtual' : 'Presencial'}
+                            </span>
+                          )}
                         </div>
                         );
                       })}
@@ -307,14 +353,26 @@ const Inicio = () => {
                     return (
                     <div key={i} style={{ borderLeftColor: col.borderColor }} className="bg-white p-4 rounded-lg shadow border-l-4">
                       <div className="flex justify-between items-center mb-2">
-                        <span style={{ backgroundColor: col.bgColor, color: col.textColor }} className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                          {ev.tipo_evento}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span style={{ backgroundColor: col.bgColor, color: col.textColor }} className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                            {ev.tipo_evento}
+                          </span>
+                          {ev.modalidad && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-gray-100 text-gray-600">
+                              {ev.modalidad}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-sm font-bold text-gray-800">{formatearHora(ev.fecha_hora)}</span>
                       </div>
                       <h6 className="text-sm font-semibold text-gray-900 mb-1">{ev.titulo}</h6>
                       <p className="text-xs text-gray-600 line-clamp-3">{ev.descripcion}</p>
                       <p className="text-[10px] text-blue-600 mt-2 font-mono uppercase">{ev.expediente_id}</p>
+                      <ParticipantesEvento
+                        tipoEvento={ev.origen === 'caso' ? 'caso' : 'usuario'}
+                        eventoId={ev.evento_id}
+                        usuarioActualId={usuarioPerfil?.id}
+                      />
                     </div>
                     );
                   })
@@ -371,7 +429,16 @@ const Inicio = () => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700">Tipo de Evento *</label>
+                  <button
+                    type="button"
+                    onClick={() => setNuevoTipo((prev) => ({ ...prev, abierto: !prev.abierto }))}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800"
+                  >
+                    {nuevoTipo.abierto ? 'Cancelar' : '+ Crear tipo'}
+                  </button>
+                </div>
                 <select
                   required
                   value={formData.tipo_evento_id}
@@ -382,6 +449,62 @@ const Inicio = () => {
                   {catalogos?.catalogos?.tipos_evento?.map(tipo => (
                     <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
                   ))}
+                </select>
+                {nuevoTipo.abierto && (
+                  <div className="mt-2 flex items-center gap-2 bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                    <input
+                      type="text"
+                      value={nuevoTipo.nombre}
+                      onChange={(e) => setNuevoTipo((prev) => ({ ...prev, nombre: e.target.value }))}
+                      placeholder="Nombre del nuevo tipo"
+                      className="flex-1 p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="color"
+                      value={nuevoTipo.color}
+                      onChange={(e) => setNuevoTipo((prev) => ({ ...prev, color: e.target.value }))}
+                      className="w-9 h-9 rounded border border-gray-300 cursor-pointer p-0.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCrearTipo}
+                      className="px-3 py-2 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                )}
+                {tiposPropios.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-[10px] text-gray-400 font-semibold self-center mr-1">Mis tipos:</span>
+                    {tiposPropios.map((tipo) => (
+                      <span key={tipo.id} className="inline-flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                        {tipo.nombre}
+                        <button
+                          type="button"
+                          onClick={() => handleEliminarTipo(tipo.id, tipo.nombre)}
+                          className="text-red-400 hover:text-red-600 font-bold"
+                          title="Eliminar tipo"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-700 mb-1">Modalidad *</label>
+                <select
+                  required
+                  value={formData.modalidad}
+                  onChange={(e) => setFormData({ ...formData, modalidad: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecciona la modalidad...</option>
+                  <option value="virtual">Virtual</option>
+                  <option value="presencial">Presencial</option>
                 </select>
               </div>
 

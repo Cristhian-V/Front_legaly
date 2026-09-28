@@ -109,6 +109,10 @@ const Layout = () => {
       '/carpetas': {
         'titulo': 'Gestion de Documentacion',
         'descripcion': 'Gestiona y evalúa las solicitudes de revisión enviadas por tu equipo.'
+      },
+      '/cites': {
+        'titulo': 'Gestión de CITES',
+        'descripcion': 'Administra la correspondencia oficial numerada de la firma.'
       }
     };
 
@@ -171,6 +175,7 @@ const Layout = () => {
             <button onClick={() => navigateTo('/revisiones')} className={getNavStyle('/revisiones')}>Bandeja de Revisiones</button>
             <button onClick={() => navigateTo('/clientes')} className={getNavStyle('/clientes')}>Clientes</button>
             <button onClick={() => navigateTo('/carpetas')} className={getNavStyle('/carpetas')}>Control Documental</button>
+            <button onClick={() => navigateTo('/cites')} className={getNavStyle('/cites')}>CITES</button>
           </div>
           <div className="pt-4 border-t border-gray-800 space-y-2">
             <button onClick={() => navigateTo('/configuracion')} className={getNavStyle('/configuracion')}>Configuración</button>

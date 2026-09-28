@@ -12,6 +12,7 @@ import DetalleCliente from './pages/DetalleClientes';
 import Carpetas from './pages/Carpetas';
 import DetalleCarpeta from './pages/DetalleCarpeta';
 import Configuracion from './pages/Configuracion';
+import CITES from './pages/CITES';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
             <Route path="/clientes/:id" element={<DetalleCliente />} />
             <Route path="/carpetas" element={<Carpetas />} />
             <Route path="/carpetas/:id" element={<DetalleCarpeta />} />
+            <Route path="/cites" element={<CITES />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Route>
         </Routes>

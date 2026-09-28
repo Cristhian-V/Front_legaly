@@ -33,6 +33,15 @@ const DetalleCarpeta = () => {
     tipoDocumento: '' // Úsalo si tu tabla de docs_sueltos también requiere clasificarlo
   });
 
+  // Buscador por nombre
+  const [busqueda, setBusqueda] = useState('');
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setBusquedaDebounced(busqueda), 250);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
   // (Opcional) Necesitarás traer la lista de casos activos del usuario para el select del Modal Vincular
   // const [casosUsuario, setCasosUsuario] = useState([]); 
 
@@ -260,6 +269,13 @@ const handleDescargarDocumento = async (ruta) => {
     return iconos[ext] || '📄';
   };
 
+  const normalizar = (texto) =>
+    (texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  const documentosFiltrados = documentos.filter((doc) =>
+    normalizar(doc.nombre).includes(normalizar(busquedaDebounced)),
+  );
+
   if (cargando) return <div className="p-20 text-center animate-pulse text-gray-500">Abriendo carpeta...</div>;
 
   return (
@@ -273,7 +289,16 @@ const handleDescargarDocumento = async (ruta) => {
         <h1 className="text-3xl font-black text-[#152844] flex items-center gap-3">
           <span className="text-4xl">📂</span> {carpeta}
         </h1>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {documentos.length > 0 && (
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre..."
+              className="p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56"
+            />
+          )}
           <button onClick={() => setIsCrearDocOpen(true)} className="bg-white border-2 border-[#1E3A5F] text-[#1E3A5F] hover:bg-gray-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2">
             + Doc en Blanco
           </button>
@@ -290,6 +315,11 @@ const handleDescargarDocumento = async (ruta) => {
             <span className="text-4xl block mb-2">📄</span>
             <p className="text-gray-500 font-medium">Esta carpeta está vacía.</p>
           </div>
+        ) : documentosFiltrados.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50">
+            <span className="text-4xl block mb-2">🔍</span>
+            <p className="text-gray-500 font-medium">No se encontraron archivos con “{busquedaDebounced}”.</p>
+          </div>
         ) : (
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b border-gray-200">
@@ -300,7 +330,7 @@ const handleDescargarDocumento = async (ruta) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {documentos.map((doc) => (
+              {documentosFiltrados.map((doc) => (
                 <tr key={doc.id} className="hover:bg-blue-50/30 transition group">
                   <td className="p-4 flex items-center gap-3">
                     <span className="text-2xl">{getFileIcon(doc.nombre)}</span>

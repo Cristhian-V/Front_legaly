@@ -339,7 +339,7 @@ const DetalleExpediente = () => {
         {pestañaActiva === 'general' && <TabGeneral casoId={id} detalleCaso={detalleCaso} estaCerrado={estaCerrado} />}
         {pestañaActiva === 'documentos' && <TabDocumentos casoId={id} catalogos={catalogos} datosUsuario={datosUsuario} estaCerrado={estaCerrado} recargarDocumentos={recargarDocs}/>}
         {pestañaActiva === 'actividades' && <TabActividades casoId={detalleCaso.caso?.expediente_id} estaCerrado={estaCerrado} />}
-        {pestañaActiva === 'equipo' && <TabEquipo casoId={id} catalogos={catalogos} estaCerrado={estaCerrado} />}
+        {pestañaActiva === 'equipo' && <TabEquipo casoId={id} catalogos={catalogos} estaCerrado={estaCerrado} areaLegalId={idForm?.caso?.area_legal_id} />}
         {pestañaActiva === 'historial' && <TabHistorial historial={historialCaso} />}
       </div>
 

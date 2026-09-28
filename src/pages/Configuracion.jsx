@@ -20,11 +20,9 @@ const Configuracion = () => {
         <button onClick={() => setPestañaActiva('usuarios')} className={tabStyle('usuarios')}>
           👥 Usuarios y Accesos
         </button>
-        {datosUsuario?.rol === 'Abogado Socio' && (
         <button onClick={() => setPestañaActiva('catalogos')} className={tabStyle('catalogos')}>
-          🗂️ Catálogos Generales
+          {datosUsuario?.rol === 'Abogado Socio' ? '🗂️ Catálogos Generales' : '📅 Tipos de Evento'}
         </button>
-        )}
       </div>
 
       {/* Contenido Dinámico según la Pestaña */}
